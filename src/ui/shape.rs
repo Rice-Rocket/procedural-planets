@@ -1,7 +1,7 @@
 use bevy::prelude::*;
 use bevy_egui::{egui, EguiContexts};
 
-use crate::{gen::shape::ShapeGenerator, render::planet::UpdatePlanetMesh};
+use crate::{gen::{shape::ShapeGenerator, noise_filter::NoiseLayer}, render::planet::UpdatePlanetMesh};
 
 
 pub fn shape_settings(
@@ -18,50 +18,84 @@ pub fn shape_settings(
             ui.add(egui::widgets::DragValue::new(&mut shape_gen.radius).clamp_range(0f32..=100f32).min_decimals(1).speed(0.2));
             changed = changed || (old != shape_gen.radius);
         });
-        
-        ui.horizontal(|ui| {
-            ui.label("FBM Layers:");
-            let old = shape_gen.noise.num_layers;
-            ui.add(egui::widgets::DragValue::new(&mut shape_gen.noise.num_layers).clamp_range(0..=8).min_decimals(2).speed(0.025));
-            changed = changed || (old != shape_gen.noise.num_layers);
-        });
-        
-        ui.horizontal(|ui| {
-            ui.label("Noise Strength:");
-            let old = shape_gen.noise.strength;
-            ui.add(egui::widgets::DragValue::new(&mut shape_gen.noise.strength).clamp_range(0f32..=100f32).min_decimals(2).speed(0.025));
-            changed = changed || (old != shape_gen.noise.strength);
-        });
-        
-        ui.horizontal(|ui| {
-            ui.label("Noise Roughness:");
-            let old = shape_gen.noise.roughness;
-            ui.add(egui::widgets::DragValue::new(&mut shape_gen.noise.roughness).clamp_range(0f32..=100f32).min_decimals(2).speed(0.025));
-            changed = changed || (old != shape_gen.noise.roughness);
-        });
-        
-        ui.horizontal(|ui| {
-            ui.label("Noise Frequency:");
-            let old = shape_gen.noise.frequency;
-            ui.add(egui::widgets::DragValue::new(&mut shape_gen.noise.frequency).clamp_range(0f32..=100f32).min_decimals(2).speed(0.025));
-            changed = changed || (old != shape_gen.noise.frequency);
-        });
-        
-        ui.horizontal(|ui| {
-            ui.label("Noise Persistence:");
-            let old = shape_gen.noise.persistence;
-            ui.add(egui::widgets::DragValue::new(&mut shape_gen.noise.persistence).clamp_range(0f32..=100f32).min_decimals(2).speed(0.025));
-            changed = changed || (old != shape_gen.noise.persistence);
-        });
 
         ui.horizontal(|ui| {
-            ui.label("Noise Center:");
-            let old = shape_gen.noise.center;
-            ui.add(egui::widgets::DragValue::new(&mut shape_gen.noise.center.x).prefix("X: ").clamp_range(0f32..=100f32).min_decimals(2).speed(0.025));
-            ui.add(egui::widgets::DragValue::new(&mut shape_gen.noise.center.y).prefix("Y: ").clamp_range(0f32..=100f32).min_decimals(2).speed(0.025));
-            ui.add(egui::widgets::DragValue::new(&mut shape_gen.noise.center.z).prefix("Z: ").clamp_range(0f32..=100f32).min_decimals(2).speed(0.025));
-            changed = changed || (old != shape_gen.noise.center);
+            ui.label("Noise Layers:");
+            if ui.small_button("-").clicked() && shape_gen.num_layers > 1 {
+                shape_gen.num_layers -= 1;
+                shape_gen.noise_layers.pop();
+            }
+            ui.label(format!("{}", shape_gen.num_layers));
+            if ui.small_button("+").clicked() {
+                shape_gen.num_layers += 1;
+                let num_layers = shape_gen.num_layers;
+                shape_gen.noise_layers.push(NoiseLayer::new(num_layers, false));
+            }
         });
+        
+        for i in 0..shape_gen.num_layers {
+            egui::containers::CollapsingHeader::new(format!("Layer {}", i)).show(ui, |ui| {
+                let layer = &mut shape_gen.noise_layers[i as usize];
+
+                ui.horizontal(|ui| {
+                    ui.label("Enabled:");
+                    let old = layer.enabled;
+                    ui.add(egui::widgets::Checkbox::without_text(&mut layer.enabled));
+                    changed = changed || (old != layer.enabled);
+                });
+
+                ui.horizontal(|ui| {
+                    ui.label("FBM Layers:");
+                    let old = layer.filter.num_layers;
+                    ui.add(egui::widgets::DragValue::new(&mut layer.filter.num_layers).clamp_range(0..=8).min_decimals(2).speed(0.025));
+                    changed = changed || (old != layer.filter.num_layers);
+                });
+                
+                ui.horizontal(|ui| {
+                    ui.label("Noise Strength:");
+                    let old = layer.filter.strength;
+                    ui.add(egui::widgets::DragValue::new(&mut layer.filter.strength).clamp_range(0f32..=100f32).min_decimals(2).speed(0.025));
+                    changed = changed || (old != layer.filter.strength);
+                });
+                
+                ui.horizontal(|ui| {
+                    ui.label("Noise Roughness:");
+                    let old = layer.filter.roughness;
+                    ui.add(egui::widgets::DragValue::new(&mut layer.filter.roughness).clamp_range(0f32..=100f32).min_decimals(2).speed(0.025));
+                    changed = changed || (old != layer.filter.roughness);
+                });
+                
+                ui.horizontal(|ui| {
+                    ui.label("Noise Frequency:");
+                    let old = layer.filter.frequency;
+                    ui.add(egui::widgets::DragValue::new(&mut layer.filter.frequency).clamp_range(0f32..=100f32).min_decimals(2).speed(0.025));
+                    changed = changed || (old != layer.filter.frequency);
+                });
+                
+                ui.horizontal(|ui| {
+                    ui.label("Noise Persistence:");
+                    let old = layer.filter.persistence;
+                    ui.add(egui::widgets::DragValue::new(&mut layer.filter.persistence).clamp_range(0f32..=100f32).min_decimals(2).speed(0.025));
+                    changed = changed || (old != layer.filter.persistence);
+                });
+                
+                ui.horizontal(|ui| {
+                    ui.label("Min Value:");
+                    let old = layer.filter.min_value;
+                    ui.add(egui::widgets::DragValue::new(&mut layer.filter.min_value).clamp_range(0f32..=100f32).min_decimals(2).speed(0.025));
+                    changed = changed || (old != layer.filter.min_value);
+                });
+        
+                ui.horizontal(|ui| {
+                    ui.label("Noise Center:");
+                    let old = layer.filter.center;
+                    ui.add(egui::widgets::DragValue::new(&mut layer.filter.center.x).prefix("X: ").clamp_range(0f32..=100f32).min_decimals(2).speed(0.025));
+                    ui.add(egui::widgets::DragValue::new(&mut layer.filter.center.y).prefix("Y: ").clamp_range(0f32..=100f32).min_decimals(2).speed(0.025));
+                    ui.add(egui::widgets::DragValue::new(&mut layer.filter.center.z).prefix("Z: ").clamp_range(0f32..=100f32).min_decimals(2).speed(0.025));
+                    changed = changed || (old != layer.filter.center);
+                });
+            });
+        }
     });
 
     if changed {
