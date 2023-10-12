@@ -1,7 +1,7 @@
 use bevy::prelude::*;
 use bevy_egui::{egui, EguiContexts};
 
-use crate::{gen::{shape::ShapeGenerator, noise_filter::NoiseLayer}, render::planet::UpdatePlanetMesh};
+use crate::{gen::{shape::ShapeGenerator, noise_filter::{NoiseLayer, NoiseFilterType}}, render::planet::UpdatePlanetMesh};
 
 
 pub fn shape_settings(
@@ -38,6 +38,18 @@ pub fn shape_settings(
                 let layer = &mut shape_gen.noise_layers[i as usize];
 
                 ui.horizontal(|ui| {
+                    ui.label("Filter Type:");
+                    let old = layer.filter.ty.clone();
+                    egui::ComboBox::from_id_source(0)
+                        .selected_text(format!("{:?}", layer.filter.ty))
+                        .show_ui(ui, |ui| {
+                            ui.selectable_value(&mut layer.filter.ty, NoiseFilterType::Standard, "Standard");
+                            ui.selectable_value(&mut layer.filter.ty, NoiseFilterType::Rigid, "Rigid");
+                        });
+                    changed = changed || (old != layer.filter.ty);
+                });
+
+                ui.horizontal(|ui| {
                     ui.label("Enabled:");
                     let old = layer.enabled;
                     ui.add(egui::widgets::Checkbox::without_text(&mut layer.enabled));
@@ -45,10 +57,17 @@ pub fn shape_settings(
                 });
 
                 ui.horizontal(|ui| {
-                    ui.label("FBM Layers:");
-                    let old = layer.filter.num_layers;
-                    ui.add(egui::widgets::DragValue::new(&mut layer.filter.num_layers).clamp_range(0..=8).min_decimals(2).speed(0.025));
-                    changed = changed || (old != layer.filter.num_layers);
+                    ui.label("Use First Layer As Mask:");
+                    let old = layer.first_layer_mask;
+                    ui.add(egui::widgets::Checkbox::without_text(&mut layer.first_layer_mask));
+                    changed = changed || (old != layer.first_layer_mask);
+                });
+
+                ui.horizontal(|ui| {
+                    ui.label("Noise Octaves:");
+                    let old = layer.filter.num_octaves;
+                    ui.add(egui::widgets::DragValue::new(&mut layer.filter.num_octaves).clamp_range(0..=8).min_decimals(2).speed(0.025));
+                    changed = changed || (old != layer.filter.num_octaves);
                 });
                 
                 ui.horizontal(|ui| {
@@ -66,10 +85,10 @@ pub fn shape_settings(
                 });
                 
                 ui.horizontal(|ui| {
-                    ui.label("Noise Frequency:");
-                    let old = layer.filter.frequency;
-                    ui.add(egui::widgets::DragValue::new(&mut layer.filter.frequency).clamp_range(0f32..=100f32).min_decimals(2).speed(0.025));
-                    changed = changed || (old != layer.filter.frequency);
+                    ui.label("Noise Lacunarity:");
+                    let old = layer.filter.lacunarity;
+                    ui.add(egui::widgets::DragValue::new(&mut layer.filter.lacunarity).clamp_range(0f32..=100f32).min_decimals(2).speed(0.025));
+                    changed = changed || (old != layer.filter.lacunarity);
                 });
                 
                 ui.horizontal(|ui| {
@@ -82,7 +101,7 @@ pub fn shape_settings(
                 ui.horizontal(|ui| {
                     ui.label("Min Value:");
                     let old = layer.filter.min_value;
-                    ui.add(egui::widgets::DragValue::new(&mut layer.filter.min_value).clamp_range(0f32..=100f32).min_decimals(2).speed(0.025));
+                    ui.add(egui::widgets::DragValue::new(&mut layer.filter.min_value).clamp_range(0f32..=1f32).min_decimals(2).speed(0.025));
                     changed = changed || (old != layer.filter.min_value);
                 });
         

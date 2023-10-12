@@ -21,15 +21,22 @@ impl Default for ShapeGenerator {
 }
 
 impl ShapeGenerator {
-    pub fn get_point_on_planet(&self, point_on_sphere: Vec3) -> Vec3 {
+    pub fn get_point_on_planet(&self, point_on_sphere: Vec3) -> (Vec3, f32) {
         let mut elevation = 0.0;
+        let first_layer = self.noise_layers[0].filter.evaluate(point_on_sphere);
+        if self.noise_layers[0].enabled {
+            elevation = first_layer;
+        }
 
-        for i in 0..self.num_layers {
+        for i in 1..self.num_layers {
             if self.noise_layers[i as usize].enabled {
-                elevation += self.noise_layers[i as usize].filter.evaluate(point_on_sphere);
+                let mask = if self.noise_layers[i as usize].first_layer_mask { first_layer } else { 1.0 };
+                let v = self.noise_layers[i as usize].filter.evaluate(point_on_sphere);
+                elevation += v * mask;
             }
         }
 
-        point_on_sphere * self.radius * (1.0 + elevation)
+        elevation = self.radius * (1.0 + elevation);
+        (point_on_sphere * elevation, elevation)
     }
 }

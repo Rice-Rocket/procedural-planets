@@ -10,7 +10,6 @@ pub fn spawn_directional_light(
         directional_light: DirectionalLight {
             color: Color::rgb(1.0, 1.0, 1.0),
             illuminance: 10000.0,
-            shadows_enabled: false,
             ..default()
         },
         transform: Transform::from_rotation(Quat::from_euler(EulerRot::YXZ, 0.0, 0.0, 0.0)),

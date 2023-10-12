@@ -2,6 +2,8 @@ use bevy::{prelude::*, render::{mesh::Indices, render_resource::PrimitiveTopolog
 
 use crate::{ui::color::UiColorSettings, gen::shape::ShapeGenerator};
 
+use super::planet_mat::PlanetMaterial;
+
 
 #[derive(Resource)]
 pub struct Planet {
@@ -51,15 +53,19 @@ pub fn spawn_planet(
     mut commands: Commands,
     mut planet: ResMut<Planet>,
     mut meshes: ResMut<Assets<Mesh>>,
-    mut materials: ResMut<Assets<StandardMaterial>>,
+    mut materials: ResMut<Assets<PlanetMaterial>>,
     mut update_planet_mesh_evw: EventWriter<UpdatePlanetMesh>
 ) {
     let directions = [Vec3::Y, Vec3::NEG_Y, Vec3::X, Vec3::NEG_X, Vec3::Z, Vec3::NEG_Z];
     for i in 0..6 {
         let mesh = meshes.add(Mesh::new(PrimitiveTopology::TriangleList));
-        planet.terrain_faces[i] = commands.spawn((PbrBundle {
+        let mat = PlanetMaterial {
+            min_elevation: 0.0,
+            max_elevation: 0.0,
+        };
+        planet.terrain_faces[i] = commands.spawn((MaterialMeshBundle {
             mesh: mesh.clone(),
-            material: materials.add(Color::rgb(1.0, 1.0, 1.0).into()),
+            material: materials.add(mat),
             transform: Transform::from_xyz(0.0, 0.0, 0.0),
             ..default()
         }, TerrainFace::new(
@@ -72,12 +78,17 @@ pub fn spawn_planet(
 
 pub fn generate_mesh(
     terrain_faces: Query<(&TerrainFace, &Handle<Mesh>)>,
+    face_materials: Query<&Handle<PlanetMaterial>, With<TerrainFace>>,
     mut meshes: ResMut<Assets<Mesh>>,
+    mut materials: ResMut<Assets<PlanetMaterial>>,
     planet: Res<Planet>,
     shape_gen: Res<ShapeGenerator>,
     mut update_planet_mesh_evr: EventReader<UpdatePlanetMesh>,
 ) {
     for _update_planet_mesh_ev in update_planet_mesh_evr.iter() {
+        let mut min_elevation = f32::MAX;
+        let mut max_elevation = f32::MIN;
+
         for (face, mesh_handle) in terrain_faces.iter() {
             let mut vertices = vec![Vec3::ZERO; (planet.resolution * planet.resolution) as usize];
             let mut uvs = vec![Vec2::ZERO; (planet.resolution * planet.resolution) as usize];
@@ -91,9 +102,16 @@ pub fn generate_mesh(
 
                     let point_on_cube = face.local_up + (uv.x - 0.5) * 2.0 * face.axis_a + (uv.y - 0.5) * 2.0 * face.axis_b;
                     let point_on_sphere = point_on_cube.normalize();
-    
+                    let (position, elevation) = shape_gen.get_point_on_planet(point_on_sphere);
 
-                    vertices[i as usize] = shape_gen.get_point_on_planet(point_on_sphere);
+                    if elevation > max_elevation {
+                        max_elevation = elevation;
+                    }
+                    if elevation < min_elevation {
+                        min_elevation = elevation;
+                    }
+
+                    vertices[i as usize] = position;
                     uvs[i as usize] = uv;
     
                     if x != planet.resolution - 1 && y != planet.resolution - 1 {
@@ -117,20 +135,26 @@ pub fn generate_mesh(
             mesh.duplicate_vertices();
             mesh.compute_flat_normals();
         }
+
+        for mat_handle in face_materials.iter() {
+            let mat = materials.get_mut(mat_handle).unwrap();
+            mat.min_elevation = min_elevation;
+            mat.max_elevation = max_elevation;
+        }
+        println!("{}, {}", min_elevation, max_elevation);
     }
 }
 
-pub fn generate_colors(
-    terrain_faces: Query<(&TerrainFace, &Handle<StandardMaterial>)>,
-    mut materials: ResMut<Assets<StandardMaterial>>,
+pub fn generate_materials(
+    terrain_faces: Query<(&TerrainFace, &Handle<PlanetMaterial>)>,
+    mut materials: ResMut<Assets<PlanetMaterial>>,
     planet: Res<Planet>,
     color_settings: Res<UiColorSettings>,
     mut update_planet_mats_evr: EventReader<UpdatePlanetMaterials>,
 ) {
     for _update_planet_mats_ev in update_planet_mats_evr.iter() {
         for (face, mat_handle) in terrain_faces.iter() {
-            let mat = materials.get_mut(mat_handle).unwrap();
-            mat.base_color = Color::from(color_settings.planet_color);
+            // let mat = materials.get_mut(mat_handle).unwrap();
         }
     }
 }

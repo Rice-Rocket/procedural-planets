@@ -1,4 +1,5 @@
 use bevy::{prelude::*, window::PrimaryWindow, input::mouse::{MouseMotion, MouseWheel}, core_pipeline::clear_color::ClearColorConfig};
+use bevy_egui::EguiContext;
 
 
 
@@ -39,10 +40,14 @@ pub fn pan_orbit_camera(
     mut motion_evr: EventReader<MouseMotion>,
     mut scroll_evr: EventReader<MouseWheel>,
     mouse_input: Res<Input<MouseButton>>,
-    keys: Res<Input<KeyCode>>,
-    mut query: Query<(&mut PanOrbitCamera, &mut Transform, &Projection)>
+    mut query: Query<(&mut PanOrbitCamera, &mut Transform, &Projection)>,
+    mut egui_ctxs: Query<&mut EguiContext>,
 ) {
-    if !keys.pressed(KeyCode::ShiftLeft) { return };
+    for mut ctx in egui_ctxs.iter_mut() {
+        if ctx.get_mut().wants_pointer_input() {
+            return;
+        }
+    }
 
     let orbit_button = MouseButton::Left;
     let pan_button = MouseButton::Right;
