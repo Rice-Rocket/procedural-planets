@@ -1,4 +1,4 @@
-use bevy::prelude::*;
+use bevy::{prelude::*, pbr::wireframe::WireframePlugin};
 
 pub mod gen;
 pub mod render;
@@ -19,6 +19,7 @@ fn main() {
             }),
             ..default()
         }))
+        .add_plugins(WireframePlugin)
         .add_plugins(EguiPlugin)
         .add_plugins((GeneratorPlugin, RenderPlugin, UIPlugin))
         .run();

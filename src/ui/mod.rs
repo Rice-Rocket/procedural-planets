@@ -21,9 +21,13 @@ impl Plugin for UIPlugin {
             .add_systems(Startup, spawn_camera)
             .add_systems(Update, (
                 pan_orbit_camera,
+                
                 render_settings,
                 shape_settings,
                 color_settings,
+
+                update_shape,
+                update_color,
             ))
         ;
     }

@@ -1,4 +1,4 @@
-use bevy::prelude::*;
+use bevy::{prelude::*, pbr::wireframe::WireframeConfig};
 use bevy_egui::{egui, EguiContexts};
 
 use crate::render::planet::{UpdatePlanetMesh, Planet};
@@ -23,8 +23,24 @@ pub fn render_settings(
     mut settings: ResMut<UiRenderSettings>,
     mut planet: ResMut<Planet>,
     mut update_planet_mesh_evw: EventWriter<UpdatePlanetMesh>,
+
+    time: Res<Time>,
+    mut wireframe_config: ResMut<WireframeConfig>,
+    mut last_fps_update: Local<(f32, f32)>,
 ) {
     egui::Window::new("Render Settings").show(contexts.ctx_mut(), |ui| {
+        let mut fps_value = last_fps_update.0;
+        if last_fps_update.1 > 0.25 {
+            fps_value = 1.0 / time.delta_seconds();
+            last_fps_update.1 = 0.0;
+            last_fps_update.0 = fps_value;
+        }
+        ui.label(format!("FPS: {:.1}", fps_value));
+        last_fps_update.1 += time.delta_seconds();
+        ui.label("Press [TAB] to Toggle UI");
+
+        ui.separator();
+
         ui.horizontal(|ui| {
             ui.label("Mesh Resolution:");
             let old_res = settings.planet_resolution;
@@ -33,6 +49,11 @@ pub fn render_settings(
                 planet.resolution = settings.planet_resolution;
                 update_planet_mesh_evw.send(UpdatePlanetMesh {});
             }
+        });
+
+        ui.horizontal(|ui| {
+            ui.label("Enable Wireframe:");
+            ui.add(egui::widgets::Checkbox::without_text(&mut wireframe_config.global));
         });
 
         ui.horizontal(|ui| {

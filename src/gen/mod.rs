@@ -1,5 +1,6 @@
 pub mod noise;
 pub mod shape;
+pub mod noise_filter;
 
 use bevy::prelude::*;
 
