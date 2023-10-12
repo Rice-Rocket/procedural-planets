@@ -4,6 +4,7 @@ pub mod gen;
 pub mod render;
 pub mod ui;
 
+use bevy_egui::EguiPlugin;
 use gen::*;
 use render::*;
 use ui::*;
@@ -18,6 +19,7 @@ fn main() {
             }),
             ..default()
         }))
+        .add_plugins(EguiPlugin)
         .add_plugins((GeneratorPlugin, RenderPlugin, UIPlugin))
         .run();
 }
