@@ -1,6 +1,6 @@
-use bevy::{prelude::*, render::mesh::Indices};
+use bevy::{prelude::*, render::{mesh::Indices, render_resource::PrimitiveTopology}};
 
-use crate::{ui::{render::UiRenderSettings, color::UiColorSettings}, gen::shape::ShapeGenerator};
+use crate::{ui::color::UiColorSettings, gen::shape::ShapeGenerator};
 
 
 #[derive(Resource)]
@@ -56,7 +56,7 @@ pub fn spawn_planet(
 ) {
     let directions = [Vec3::Y, Vec3::NEG_Y, Vec3::X, Vec3::NEG_X, Vec3::Z, Vec3::NEG_Z];
     for i in 0..6 {
-        let mesh = meshes.add(Mesh::from(shape::Quad::new(Vec2::ZERO)));
+        let mesh = meshes.add(Mesh::new(PrimitiveTopology::TriangleList));
         planet.terrain_faces[i] = commands.spawn((PbrBundle {
             mesh: mesh.clone(),
             material: materials.add(Color::rgb(1.0, 1.0, 1.0).into()),
@@ -80,7 +80,6 @@ pub fn generate_mesh(
     for _update_planet_mesh_ev in update_planet_mesh_evr.iter() {
         for (face, mesh_handle) in terrain_faces.iter() {
             let mut vertices = vec![Vec3::ZERO; (planet.resolution * planet.resolution) as usize];
-            let mut normals = vec![Vec3::ZERO; (planet.resolution * planet.resolution) as usize];
             let mut uvs = vec![Vec2::ZERO; (planet.resolution * planet.resolution) as usize];
             let mut triangles = vec![0u32; ((planet.resolution - 1) * (planet.resolution - 1) * 6) as usize];
             let mut tri_index = 0;
@@ -93,10 +92,8 @@ pub fn generate_mesh(
                     let point_on_cube = face.local_up + (uv.x - 0.5) * 2.0 * face.axis_a + (uv.y - 0.5) * 2.0 * face.axis_b;
                     let point_on_sphere = point_on_cube.normalize();
     
-                    let norm = (point_on_sphere - planet.position).normalize();
 
                     vertices[i as usize] = shape_gen.get_point_on_planet(point_on_sphere);
-                    normals[i as usize] = norm;
                     uvs[i as usize] = uv;
     
                     if x != planet.resolution - 1 && y != planet.resolution - 1 {
@@ -114,10 +111,11 @@ pub fn generate_mesh(
             }
     
             let mesh = meshes.get_mut(&mesh_handle).unwrap();
-            mesh.insert_attribute(Mesh::ATTRIBUTE_UV_0, uvs);
             mesh.insert_attribute(Mesh::ATTRIBUTE_POSITION, vertices);
-            mesh.insert_attribute(Mesh::ATTRIBUTE_NORMAL, normals);
+            mesh.insert_attribute(Mesh::ATTRIBUTE_UV_0, uvs);
             mesh.set_indices(Some(Indices::U32(triangles)));
+            mesh.duplicate_vertices();
+            mesh.compute_flat_normals();
         }
     }
 }

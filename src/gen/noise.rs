@@ -1,5 +1,6 @@
 use bevy::prelude::*;
 
+#[derive(Clone)]
 pub struct NoiseSimplex3d {
     random: [i32; Self::SIZE as usize * 2],
 }

@@ -3,7 +3,7 @@ use bevy::prelude::*;
 use super::noise_filter::NoiseFilter;
 
 
-#[derive(Resource)]
+#[derive(Resource, Clone)]
 pub struct ShapeGenerator {
     pub radius: f32,
     pub noise: NoiseFilter,
