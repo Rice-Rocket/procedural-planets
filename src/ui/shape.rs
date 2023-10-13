@@ -34,7 +34,7 @@ pub fn shape_settings(
         });
         
         for i in 0..shape_gen.num_layers {
-            egui::containers::CollapsingHeader::new(format!("Layer {}", i)).show(ui, |ui| {
+            egui::containers::CollapsingHeader::new(format!("Layer {}", i + 1)).show(ui, |ui| {
                 let layer = &mut shape_gen.noise_layers[i as usize];
 
                 ui.horizontal(|ui| {
