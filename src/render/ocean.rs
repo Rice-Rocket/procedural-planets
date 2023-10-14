@@ -2,6 +2,10 @@ use bevy::{prelude::*, reflect::{TypeUuid, TypePath}, render::render_resource::A
 
 use crate::ui::render::UiRenderSettings;
 
+// ! IDEA: to get depth prepass in post processing shader, just pass in the depth
+// ! texture manually, following bevy's source code
+
+
 
 #[derive(AsBindGroup, Debug, Clone, TypeUuid, TypePath)]
 #[uuid = "4c5eb867-07fc-4e23-b30c-2169f38ba1de"]

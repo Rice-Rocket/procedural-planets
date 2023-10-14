@@ -5,6 +5,14 @@ pub struct NoiseSimplex3d {
     random: [i32; Self::SIZE as usize * 2],
 }
 
+impl Default for NoiseSimplex3d {
+    fn default() -> Self {
+        Self {
+            random: [0; Self::SIZE as usize * 2],
+        }
+    }
+}
+
 impl NoiseSimplex3d {
     const SOURCE: [i32; 256] = [
         151, 160, 137, 91, 90, 15, 131, 13, 201, 95, 96, 53, 194, 233, 7, 225, 140, 36, 103, 30, 69, 142,

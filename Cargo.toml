@@ -10,6 +10,8 @@ bevy = { version = "0.11.3", features = ["dynamic_linking"] }
 bevy_egui = "0.22.0"
 bytemuck = "1.14.0"
 rand = "0.8.5"
+serde = "1.0.189"
+ron = "0.8.1"
 
 [workspace]
 resolver = "2"

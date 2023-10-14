@@ -1,16 +1,19 @@
 use bevy::prelude::*;
+use serde::{Serialize, Deserialize};
 
 use super::noise::NoiseSimplex3d;
 
-#[derive(Clone, Debug, PartialEq)]
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
 pub enum NoiseFilterType {
     Standard,
     Rigid,
 }
 
-#[derive(Clone)]
+#[derive(Clone, Serialize, Deserialize)]
 pub struct NoiseFilter {
-    simplex_3d: NoiseSimplex3d,
+    #[serde(skip)]
+    pub simplex_3d: NoiseSimplex3d,
+    pub noise_seed: u32,
     pub ty: NoiseFilterType,
 
     pub num_octaves: i32,
@@ -27,6 +30,7 @@ impl NoiseFilter {
     pub fn new(seed: u32) -> Self {
         Self {
             simplex_3d: NoiseSimplex3d::new(seed),
+            noise_seed: seed,
             ty: NoiseFilterType::Standard,
 
             num_octaves: 1,
@@ -86,7 +90,7 @@ impl NoiseFilter {
 }
 
 
-#[derive(Clone)]
+#[derive(Serialize, Deserialize, Clone)]
 pub struct NoiseLayer {
     pub filter: NoiseFilter,
     pub first_layer_mask: bool,

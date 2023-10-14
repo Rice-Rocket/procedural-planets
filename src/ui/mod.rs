@@ -2,6 +2,7 @@ pub mod camera;
 pub mod shape;
 pub mod color;
 pub mod render;
+pub mod save;
 
 use bevy::prelude::*;
 

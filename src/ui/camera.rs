@@ -1,4 +1,4 @@
-use bevy::{prelude::*, window::PrimaryWindow, input::mouse::{MouseMotion, MouseWheel}, core_pipeline::{clear_color::ClearColorConfig, prepass::DepthPrepass}, render::camera::CameraProjection};
+use bevy::{prelude::*, window::PrimaryWindow, input::mouse::{MouseMotion, MouseWheel}, core_pipeline::{clear_color::ClearColorConfig, prepass::DepthPrepass}};
 use bevy_egui::EguiContext;
 
 
@@ -122,14 +122,6 @@ pub fn pan_orbit_camera(
 pub fn spawn_camera(
     mut commands: Commands,
 ) {
-    let a = Camera3dBundle {
-        camera_3d: Camera3d {
-            clear_color: ClearColorConfig::Custom(Color::BLACK),
-            ..default()
-        },
-        transform: Transform::from_xyz(0.0, 0.0, 5.0).looking_at(Vec3::default(), Vec3::Y),
-        ..default()
-    };
     commands.spawn((
         Camera3dBundle {
             camera_3d: Camera3d {

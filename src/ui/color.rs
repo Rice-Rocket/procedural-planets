@@ -1,9 +1,10 @@
 use bevy::prelude::*;
 use bevy_egui::{egui, EguiContexts};
+use serde::{Serialize, Deserialize};
 
 use crate::render::{planet::UpdatePlanetMaterials, planet_mat::ColorGradient};
 
-#[derive(Resource)]
+#[derive(Resource, Serialize, Deserialize, Clone)]
 pub struct UiColorSettings {
     pub num_elevation_colors: usize,
     pub elevation_colors: ColorGradient,

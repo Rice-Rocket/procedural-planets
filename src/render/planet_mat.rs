@@ -1,4 +1,5 @@
 use bevy::{prelude::*, reflect::{TypeUuid, TypePath}, render::render_resource::AsBindGroup};
+use serde::{Serialize, Deserialize};
 
 
 #[derive(AsBindGroup, Debug, Clone, TypeUuid, TypePath)]
@@ -20,6 +21,7 @@ impl Material for PlanetMaterial {
 }
 
 
+#[derive(Serialize, Deserialize, Clone)]
 pub struct ColorGradient {
     key_points: Vec<(f32, [f32; 3], bool)>,
 }

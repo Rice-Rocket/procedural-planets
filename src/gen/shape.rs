@@ -1,9 +1,10 @@
 use bevy::prelude::*;
+use serde::{Serialize, Deserialize};
 
 use super::noise_filter::NoiseLayer;
 
 
-#[derive(Resource, Clone)]
+#[derive(Resource, Clone, Serialize, Deserialize)]
 pub struct ShapeGenerator {
     pub radius: f32,
     pub num_layers: u32,

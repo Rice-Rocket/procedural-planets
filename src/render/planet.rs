@@ -101,6 +101,12 @@ pub fn generate_mesh(
         let mut max_elevation = f32::MIN;
 
         for (face, mesh_handle) in terrain_faces.iter() {
+            let mesh = meshes.get_mut(&mesh_handle).unwrap();
+            mesh.remove_attribute(Mesh::ATTRIBUTE_POSITION);
+            mesh.remove_attribute(Mesh::ATTRIBUTE_NORMAL);
+            mesh.remove_attribute(Mesh::ATTRIBUTE_UV_0);
+            mesh.set_indices(None);
+
             let mut vertices = vec![Vec3::ZERO; (planet.resolution * planet.resolution) as usize];
             let mut uvs = vec![Vec2::ZERO; (planet.resolution * planet.resolution) as usize];
             let mut triangles = vec![0u32; ((planet.resolution - 1) * (planet.resolution - 1) * 6) as usize];
@@ -142,7 +148,6 @@ pub fn generate_mesh(
                 }
             }
     
-            let mesh = meshes.get_mut(&mesh_handle).unwrap();
             mesh.insert_attribute(Mesh::ATTRIBUTE_POSITION, vertices);
             mesh.insert_attribute(Mesh::ATTRIBUTE_UV_0, uvs);
             mesh.set_indices(Some(Indices::U32(triangles)));
