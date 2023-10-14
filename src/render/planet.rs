@@ -113,6 +113,9 @@ pub fn generate_mesh(
 
                     let point_on_cube = face.local_up + (uv.x - 0.5) * 2.0 * face.axis_a + (uv.y - 0.5) * 2.0 * face.axis_b;
                     let point_on_sphere = point_on_cube.normalize();
+                    // let unscaled_elevation = shape_gen.get_unscaled_elevation(point_on_sphere);
+                    // let elevation = shape_gen.scale_elevation(unscaled_elevation);
+                    // let position = point_on_sphere * elevation;
                     let (position, elevation) = shape_gen.get_point_on_planet(point_on_sphere);
 
                     if elevation > max_elevation {

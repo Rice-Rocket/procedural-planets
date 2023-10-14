@@ -15,7 +15,7 @@ pub fn shape_settings(
         ui.horizontal(|ui| {
             ui.label("Radius:");
             let old = shape_gen.radius;
-            ui.add(egui::widgets::DragValue::new(&mut shape_gen.radius).clamp_range(0f32..=100f32).min_decimals(1).speed(0.2));
+            ui.add(egui::widgets::DragValue::new(&mut shape_gen.radius).clamp_range(0f32..=100f32).min_decimals(2).speed(0.025));
             changed = changed || (old != shape_gen.radius);
         });
 
@@ -99,10 +99,17 @@ pub fn shape_settings(
                 });
                 
                 ui.horizontal(|ui| {
-                    ui.label("Min Value:");
-                    let old = layer.filter.min_value;
-                    ui.add(egui::widgets::DragValue::new(&mut layer.filter.min_value).clamp_range(0f32..=1f32).min_decimals(2).speed(0.025));
-                    changed = changed || (old != layer.filter.min_value);
+                    ui.label("Vertical Offset:");
+                    let old = layer.filter.offset;
+                    ui.add(egui::widgets::DragValue::new(&mut layer.filter.offset).clamp_range(0f32..=1f32).min_decimals(2).speed(0.025));
+                    changed = changed || (old != layer.filter.offset);
+                });
+                
+                ui.horizontal(|ui| {
+                    ui.label("Floor:");
+                    let old = layer.filter.floor;
+                    ui.add(egui::widgets::DragValue::new(&mut layer.filter.floor).clamp_range(0f32..=1f32).min_decimals(2).speed(0.025));
+                    changed = changed || (old != layer.filter.floor);
                 });
         
                 ui.horizontal(|ui| {

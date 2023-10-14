@@ -18,7 +18,8 @@ pub struct NoiseFilter {
     pub roughness: f32,
     pub lacunarity: f32,
     pub persistence: f32,
-    pub min_value: f32,
+    pub offset: f32,
+    pub floor: f32,
     pub center: Vec3,
 }
 
@@ -33,7 +34,8 @@ impl NoiseFilter {
             roughness: 1.0,
             lacunarity: 2.0,
             persistence: 0.5,
-            min_value: 0.0,
+            offset: 0.0,
+            floor: 0.0,
             center: Vec3::ZERO,
         }
     }
@@ -57,7 +59,7 @@ impl NoiseFilter {
             amp *= self.persistence;
         }
         
-        noise_val = (noise_val - self.min_value).max(0.0);
+        noise_val = (noise_val - self.offset).max(self.floor - 1.0);
         noise_val * self.strength
     }
 
@@ -78,7 +80,7 @@ impl NoiseFilter {
             amp *= self.persistence;
         }
         
-        noise_val = (noise_val - self.min_value).max(0.0);
+        noise_val = (noise_val - self.offset).max(self.floor - 1.0);
         noise_val * self.strength
     }
 }

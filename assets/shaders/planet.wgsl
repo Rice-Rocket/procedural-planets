@@ -34,7 +34,6 @@ fn fragment(in: MeshVertexOutput) -> @location(0) vec4<f32> {
     
     let elevation = length(in.world_position.xyz);
     let norm_elevation = (elevation - planet.min_elevation) / (planet.max_elevation - planet.min_elevation);
-    // let planet_col = lerp(vec3(0.0, 0.0, 0.0), vec3(1.0, 1.0, 1.0), norm_elevation);
     let planet_col = textureSample(elevation_gradient_texture, elevation_gradient_sampler, vec2(norm_elevation, 0.0)).xyz;
 
     // * Get Built in Bevy PBR Result
