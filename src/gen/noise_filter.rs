@@ -7,6 +7,7 @@ use super::noise::NoiseSimplex3d;
 pub enum NoiseFilterType {
     Standard,
     Rigid,
+    Warp,
 }
 
 #[derive(Clone, Serialize, Deserialize)]
@@ -24,6 +25,7 @@ pub struct NoiseFilter {
     pub offset: f32,
     pub floor: f32,
     pub center: Vec3,
+    pub warp_offset: Vec3,
 }
 
 impl NoiseFilter {
@@ -41,6 +43,7 @@ impl NoiseFilter {
             offset: 0.0,
             floor: 0.0,
             center: Vec3::ZERO,
+            warp_offset: Vec3::new(0.0, 100.0, -100.0),
         }
     }
 
@@ -48,6 +51,7 @@ impl NoiseFilter {
         match self.ty {
             NoiseFilterType::Standard => self.eval_standard(p),
             NoiseFilterType::Rigid => self.eval_rigid(p),
+            NoiseFilterType::Warp => self.eval_standard(p),
         }
     }
 
@@ -93,6 +97,8 @@ impl NoiseFilter {
 #[derive(Serialize, Deserialize, Clone)]
 pub struct NoiseLayer {
     pub filter: NoiseFilter,
+    pub is_warp: bool,
+    pub warp_target: u32,
     pub first_layer_mask: bool,
     pub enabled: bool,
 }
@@ -101,6 +107,8 @@ impl NoiseLayer {
     pub fn new(i: u32, enabled: bool) -> Self {
         Self {
             filter: NoiseFilter::new(i),
+            is_warp: false,
+            warp_target: 1,
             first_layer_mask: false,
             enabled,
         }

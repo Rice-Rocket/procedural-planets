@@ -33,7 +33,8 @@ pub fn shape_settings(
             }
         });
         
-        for i in 0..shape_gen.num_layers {
+        let num_layers = shape_gen.num_layers;
+        for i in 0..num_layers {
             egui::containers::CollapsingHeader::new(format!("Layer {}", i + 1)).show(ui, |ui| {
                 let layer = &mut shape_gen.noise_layers[i as usize];
 
@@ -45,7 +46,9 @@ pub fn shape_settings(
                         .show_ui(ui, |ui| {
                             ui.selectable_value(&mut layer.filter.ty, NoiseFilterType::Standard, "Standard");
                             ui.selectable_value(&mut layer.filter.ty, NoiseFilterType::Rigid, "Rigid");
+                            ui.selectable_value(&mut layer.filter.ty, NoiseFilterType::Warp, "Warp");
                         });
+                    layer.is_warp = layer.filter.ty == NoiseFilterType::Warp;
                     changed = changed || (old != layer.filter.ty);
                 });
 
@@ -63,10 +66,28 @@ pub fn shape_settings(
                     changed = changed || (old != layer.first_layer_mask);
                 });
 
+                if layer.is_warp {
+                    ui.horizontal(|ui| {
+                        ui.label("Warp Target Layer:");
+                        let old = layer.warp_target;
+                        ui.add(egui::DragValue::new(&mut layer.warp_target).clamp_range(1..=num_layers).max_decimals(0).speed(0.05));
+                        changed = changed || (old != layer.warp_target);
+                    });
+
+                    ui.horizontal(|ui| {
+                        ui.label("Warp Offset:");
+                        let old = layer.filter.warp_offset;
+                        ui.add(egui::widgets::DragValue::new(&mut layer.filter.warp_offset.x).prefix("X: ").clamp_range(0f32..=100f32).min_decimals(2).speed(0.025));
+                        ui.add(egui::widgets::DragValue::new(&mut layer.filter.warp_offset.y).prefix("Y: ").clamp_range(0f32..=100f32).min_decimals(2).speed(0.025));
+                        ui.add(egui::widgets::DragValue::new(&mut layer.filter.warp_offset.z).prefix("Z: ").clamp_range(0f32..=100f32).min_decimals(2).speed(0.025));
+                        changed = changed || (old != layer.filter.warp_offset);
+                    });
+                }
+
                 ui.horizontal(|ui| {
                     ui.label("Noise Octaves:");
                     let old = layer.filter.num_octaves;
-                    ui.add(egui::widgets::DragValue::new(&mut layer.filter.num_octaves).clamp_range(0..=8).max_decimals(0).speed(0.025));
+                    ui.add(egui::widgets::DragValue::new(&mut layer.filter.num_octaves).clamp_range(0..=8).max_decimals(0).speed(0.05));
                     changed = changed || (old != layer.filter.num_octaves);
                 });
                 

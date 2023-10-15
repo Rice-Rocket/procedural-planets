@@ -26,15 +26,28 @@ impl Default for ShapeGenerator {
 impl ShapeGenerator {
     pub fn get_point_on_planet(&self, point_on_sphere: Vec3) -> (Vec3, f32) {
         let mut elevation = 0.0;
-        let first_layer = self.noise_layers[0].filter.evaluate(point_on_sphere);
+        let warp_targets: Vec<u32> = self.noise_layers.iter().map(|x| if x.is_warp && x.enabled { x.warp_target - 1 } else { self.num_layers }).collect();
+
+        let first_layer = if warp_targets.contains(&0) {
+            let warp_p = self.get_warped_pos(point_on_sphere, &self.noise_layers[warp_targets.iter().position(|x| *x == 0).unwrap()]);
+            self.noise_layers[0].filter.evaluate(point_on_sphere + warp_p)
+        } else {
+            self.noise_layers[0].filter.evaluate(point_on_sphere)
+        };
         if self.noise_layers[0].enabled {
             elevation = first_layer;
         }
 
         for i in 1..self.num_layers {
-            if self.noise_layers[i as usize].enabled {
-                let mask = if self.noise_layers[i as usize].first_layer_mask { (first_layer - self.sea_level + 1.0).max(0.0) } else { 1.0 };
-                let v = self.noise_layers[i as usize].filter.evaluate(point_on_sphere);
+            let layer = &self.noise_layers[i as usize];
+            if layer.enabled && !layer.is_warp {
+                let mask = if layer.first_layer_mask { (first_layer - self.sea_level + 1.0).max(0.0) } else { 1.0 };
+                let v = if warp_targets.contains(&i) {
+                    let warp_p = self.get_warped_pos(point_on_sphere, &self.noise_layers[warp_targets.iter().position(|x| *x == i).unwrap()]);
+                    layer.filter.evaluate(point_on_sphere + warp_p)
+                } else {
+                    layer.filter.evaluate(point_on_sphere)
+                };
                 elevation += v * mask;
             }
         }
@@ -43,27 +56,10 @@ impl ShapeGenerator {
         (point_on_sphere * elevation, elevation)
     }
 
-    pub fn get_unscaled_elevation(&self, point_on_sphere: Vec3) -> f32 {
-        let mut elevation = 0.0;
-        let first_layer = self.noise_layers[0].filter.evaluate(point_on_sphere);
-        if self.noise_layers[0].enabled {
-            elevation = first_layer;
-        }
-
-        for i in 1..self.num_layers {
-            if self.noise_layers[i as usize].enabled {
-                let mask = if self.noise_layers[i as usize].first_layer_mask { first_layer } else { 1.0 };
-                let v = self.noise_layers[i as usize].filter.evaluate(point_on_sphere);
-                elevation += v * mask;
-            }
-        }
-
-        elevation
-    }
-
-    pub fn scale_elevation(&self, unscaled: f32) -> f32 {
-        let mut v = unscaled.max(0.0);
-        v = self.radius * (1.0 + v);
-        v
+    pub fn get_warped_pos(&self, p: Vec3, warp_source: &NoiseLayer) -> Vec3 {
+        let x = warp_source.filter.evaluate(p + warp_source.filter.warp_offset.x);
+        let y = warp_source.filter.evaluate(p + warp_source.filter.warp_offset.y);
+        let z = warp_source.filter.evaluate(p + warp_source.filter.warp_offset.z);
+        Vec3::new(x, y, z)
     }
 }
