@@ -66,7 +66,7 @@ pub fn shape_settings(
                 ui.horizontal(|ui| {
                     ui.label("Noise Octaves:");
                     let old = layer.filter.num_octaves;
-                    ui.add(egui::widgets::DragValue::new(&mut layer.filter.num_octaves).clamp_range(0..=8).min_decimals(2).speed(0.025));
+                    ui.add(egui::widgets::DragValue::new(&mut layer.filter.num_octaves).clamp_range(0..=8).max_decimals(0).speed(0.025));
                     changed = changed || (old != layer.filter.num_octaves);
                 });
                 

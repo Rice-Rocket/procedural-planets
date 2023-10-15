@@ -14,10 +14,13 @@ pub struct UiRenderSettings {
     pub ocean_radius: f32,
     pub ocean_depth_mul: f32,
     pub ocean_alpha_mul: f32,
+    pub ocean_smoothness: f32,
     pub ocean_color_1: [f32; 3],
     pub ocean_color_2: [f32; 3],
 
+    #[serde(skip)]
     pub load_path: String,
+    #[serde(skip)]
     pub save_path: String,
 }
 
@@ -30,6 +33,7 @@ impl Default for UiRenderSettings {
             ocean_radius: 1.0,
             ocean_depth_mul: 1.0,
             ocean_alpha_mul: 1.0,
+            ocean_smoothness: 1.0,
             ocean_color_1: [0.0; 3],
             ocean_color_2: [1.0; 3],
             load_path: String::from(""),
@@ -78,7 +82,7 @@ pub fn render_settings(
             ui.text_edit_singleline(&mut settings.load_path);
         });
         ui.horizontal(|ui| {
-            if ui.button("Save Scene:").clicked() {
+            if ui.button("Save Planet:").clicked() {
                 let savestate = SaveState {
                     shape_gen: shape_gen.clone(),
                     colors: colors.clone(),
@@ -119,6 +123,10 @@ pub fn render_settings(
         ui.horizontal(|ui| {
             ui.label("Ocean Elevation:");
             ui.add(egui::DragValue::new(&mut settings.ocean_radius).speed(0.025).min_decimals(2).clamp_range(0f32..=100f32));
+            if shape_gen.sea_level != settings.ocean_radius {
+                shape_gen.sea_level = settings.ocean_radius;
+                update_planet_mesh_evw.send(UpdatePlanetMesh {});
+            }
         });
 
         ui.horizontal(|ui| {
@@ -129,6 +137,11 @@ pub fn render_settings(
         ui.horizontal(|ui| {
             ui.label("Ocean Alpha Multiplier:");
             ui.add(egui::DragValue::new(&mut settings.ocean_alpha_mul).speed(0.05).min_decimals(2).clamp_range(0f32..=100f32));
+        });
+
+        ui.horizontal(|ui| {
+            ui.label("Ocean Smoothness:");
+            ui.add(egui::DragValue::new(&mut settings.ocean_smoothness).speed(0.05).min_decimals(2).clamp_range(0f32..=1f32));
         });
 
         ui.horizontal(|ui| {

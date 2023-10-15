@@ -17,6 +17,8 @@ pub struct OceanMaterial {
     #[uniform(0)]
     pub alpha_mul: f32,
     #[uniform(0)]
+    pub smoothness: f32,
+    #[uniform(0)]
     pub color_1: Vec4,
     #[uniform(0)]
     pub color_2: Vec4,
@@ -37,6 +39,7 @@ impl Default for OceanMaterial {
             radius: 1.0,
             depth_mul: 1.0, 
             alpha_mul: 1.0,
+            smoothness: 1.0,
             color_1: Vec4::ZERO,
             color_2: Vec4::ONE,
         }
@@ -50,7 +53,7 @@ pub fn spawn_ocean(
     mut ocean_materials: ResMut<Assets<OceanMaterial>>,
 ) {
     commands.spawn(MaterialMeshBundle {
-        mesh: meshes.add(Mesh::try_from(shape::Icosphere { radius: 1.0, subdivisions: 5 }).unwrap()),
+        mesh: meshes.add(Mesh::try_from(shape::Icosphere { radius: 1.0, subdivisions: 6 }).unwrap()),
         material: ocean_materials.add(OceanMaterial::default()),
         transform: Transform::from_xyz(0.0, 0.0, 0.0),
         ..default()
@@ -63,14 +66,15 @@ pub fn update_ocean(
     render_settings: Res<UiRenderSettings>,
 ) {
     for (mut transform, mat_handle) in ocean_transforms.iter_mut() {
-        transform.scale.x = render_settings.ocean_radius;
-        transform.scale.y = render_settings.ocean_radius;
-        transform.scale.z = render_settings.ocean_radius;
+        transform.scale.x = render_settings.ocean_radius * 1.0;
+        transform.scale.y = render_settings.ocean_radius * 1.0;
+        transform.scale.z = render_settings.ocean_radius * 1.0;
 
         let mat = ocean_materials.get_mut(mat_handle).unwrap();
         mat.radius = render_settings.ocean_radius;
         mat.depth_mul = render_settings.ocean_depth_mul;
         mat.alpha_mul = render_settings.ocean_alpha_mul;
+        mat.smoothness = render_settings.ocean_smoothness;
         mat.color_1 = Vec4::new(render_settings.ocean_color_1[0], render_settings.ocean_color_1[1], render_settings.ocean_color_1[2], 1.0);
         mat.color_2 = Vec4::new(render_settings.ocean_color_2[0], render_settings.ocean_color_2[1], render_settings.ocean_color_2[2], 1.0);
     }
