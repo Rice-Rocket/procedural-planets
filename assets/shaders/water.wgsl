@@ -13,10 +13,6 @@ struct OceanMaterial {
     depth_mul: f32,
     alpha_mul: f32,
     smoothness: f32,
-// #ifdef SIXTEEN_BYTE_ALIGNMENT
-    // WebGL2 structs must be 16 byte aligned.
-//     _webgl2_padding: f32
-// #endif
     color_1: vec4<f32>,
     color_2: vec4<f32>,
 }
@@ -86,7 +82,7 @@ fn fragment(in: MeshVertexOutput) -> @location(0) vec4<f32> {
 
         let optical_depth = 1.0 - exp(-ocean_view_depth * ocean.depth_mul);
         let alpha = 1.0 - exp(-ocean_view_depth * ocean.alpha_mul);
-        let ocean_col = lerp3(ocean.color_2.xyz, ocean.color_1.xyz, optical_depth) * incoming_light;
+        let ocean_col = lerp3(ocean.color_2.xyz, ocean.color_1.xyz, optical_depth) * max(0.01, incoming_light);
 
         return vec4(ocean_col, alpha);
     }

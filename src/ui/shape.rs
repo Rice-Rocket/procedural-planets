@@ -8,6 +8,7 @@ pub fn shape_settings(
     mut contexts: EguiContexts,
     mut shape_gen: ResMut<ShapeGenerator>,
     mut update_planet_mesh_evw: EventWriter<UpdatePlanetMesh>,
+    mut auto_update: Local<bool>,
 ) {
     let mut changed = false;
 
@@ -17,6 +18,13 @@ pub fn shape_settings(
             let old = shape_gen.radius;
             ui.add(egui::widgets::DragValue::new(&mut shape_gen.radius).clamp_range(0f32..=100f32).min_decimals(2).speed(0.025));
             changed = changed || (old != shape_gen.radius);
+        });
+
+        ui.add(egui::Checkbox::new(&mut auto_update, "Auto-Update"));
+        ui.add_visible_ui(!*auto_update, |ui| {
+            if ui.button("Update Mesh").clicked() {
+                update_planet_mesh_evw.send(UpdatePlanetMesh {});
+            }
         });
 
         ui.horizontal(|ui| {
@@ -145,7 +153,7 @@ pub fn shape_settings(
         }
     });
 
-    if changed {
+    if changed && *auto_update {
         update_planet_mesh_evw.send(UpdatePlanetMesh {});
     }
 }

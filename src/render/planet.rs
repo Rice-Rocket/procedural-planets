@@ -1,8 +1,8 @@
-use bevy::{prelude::*, render::{mesh::Indices, render_resource::{PrimitiveTopology, Extent3d, TextureDimension, TextureFormat}, texture::TextureFormatPixelInfo}};
+use bevy::{prelude::*, render::{mesh::Indices, render_resource::PrimitiveTopology}};
 
 use crate::{ui::color::UiColorSettings, gen::shape::ShapeGenerator};
 
-use super::planet_mat::{PlanetMaterial, ColorGradient};
+use super::planet_mat::{PlanetMaterial, ColorGradient, ColorEntry};
 
 
 #[derive(Resource)]
@@ -54,7 +54,6 @@ pub fn spawn_planet(
     mut planet: ResMut<Planet>,
     mut meshes: ResMut<Assets<Mesh>>,
     mut materials: ResMut<Assets<PlanetMaterial>>,
-    mut images: ResMut<Assets<Image>>,
     mut update_planet_mesh_evw: EventWriter<UpdatePlanetMesh>
 ) {
     let directions = [Vec3::Y, Vec3::NEG_Y, Vec3::X, Vec3::NEG_X, Vec3::Z, Vec3::NEG_Z];
@@ -63,16 +62,8 @@ pub fn spawn_planet(
         let mat = PlanetMaterial {
             min_elevation: 0.0,
             max_elevation: 0.0,
-            elevation_gradient: images.add(Image::new_fill(
-                Extent3d {
-                    width: ColorGradient::RESOLUTION,
-                    height: 1,
-                    depth_or_array_layers: 1,
-                },
-                TextureDimension::D2,
-                &[0; 4],
-                TextureFormat::Rgba8Unorm,
-            ))
+            n_colors: 1,
+            colors: [ColorEntry::default(); ColorGradient::RESOLUTION as usize]
         };
         planet.terrain_faces[i] = commands.spawn((MaterialMeshBundle {
             mesh: mesh.clone(),
@@ -163,19 +154,16 @@ pub fn generate_mesh(
 pub fn generate_materials(
     terrain_faces: Query<&Handle<PlanetMaterial>, With<TerrainFace>>,
     mut materials: ResMut<Assets<PlanetMaterial>>,
-    mut images: ResMut<Assets<Image>>,
     color_settings: Res<UiColorSettings>,
     mut update_planet_mats_evr: EventReader<UpdatePlanetMaterials>,
 ) {
     for _update_planet_mats_ev in update_planet_mats_evr.iter() {
         for mat_handle in terrain_faces.iter() {
             let mat = materials.get_mut(mat_handle).unwrap();
-            let elevation_grad_img = images.get_mut(&mat.elevation_gradient).unwrap();
+            mat.n_colors = color_settings.colors.count();
 
-            for (i, col) in color_settings.elevation_colors.interpolated().iter().enumerate() {
-                elevation_grad_img.data[i * TextureFormat::Rgba8Unorm.pixel_size() + 0] = (col.r() * 255.0) as u8;
-                elevation_grad_img.data[i * TextureFormat::Rgba8Unorm.pixel_size() + 1] = (col.g() * 255.0) as u8;
-                elevation_grad_img.data[i * TextureFormat::Rgba8Unorm.pixel_size() + 2] = (col.b() * 255.0) as u8;
+            for (i, col) in color_settings.colors.sorted().iter().enumerate() {
+                mat.colors[i] = ColorEntry::new(col.0, col.1, col.2);
             }
         }
     }

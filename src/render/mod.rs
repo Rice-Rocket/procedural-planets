@@ -2,6 +2,7 @@ pub mod planet;
 pub mod light;
 pub mod planet_mat;
 pub mod ocean;
+pub mod utils;
 
 use bevy::prelude::*;
 

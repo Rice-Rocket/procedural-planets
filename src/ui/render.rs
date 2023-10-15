@@ -99,9 +99,8 @@ pub fn render_settings(
 
         ui.horizontal(|ui| {
             ui.label("Mesh Resolution:");
-            let old_res = settings.planet_resolution;
             ui.add(egui::widgets::DragValue::new(&mut settings.planet_resolution).clamp_range(3..=512));
-            if old_res != settings.planet_resolution {
+            if ui.button("Update").clicked() {
                 planet.resolution = settings.planet_resolution;
                 update_planet_mesh_evw.send(UpdatePlanetMesh {});
             }
