@@ -24,7 +24,17 @@ impl Default for ShapeGenerator {
 }
 
 impl ShapeGenerator {
-    pub fn get_point_on_planet(&self, point_on_sphere: Vec3) -> (Vec3, f32) {
+    pub fn get_point_and_elevation(&self, point_on_sphere: Vec3) -> (Vec3, f32) {
+        let elevation = self.get_elevation(point_on_sphere);
+        (point_on_sphere * elevation, elevation)
+    }
+
+    pub fn get_point(&self, point_on_sphere: Vec3) -> Vec3 {
+        let elevation = self.get_elevation(point_on_sphere);
+        point_on_sphere * elevation
+    }
+
+    pub fn get_elevation(&self, point_on_sphere: Vec3) -> f32 {
         let mut elevation = 0.0;
         let warp_targets: Vec<u32> = self.noise_layers.iter().map(|x| if x.is_warp && x.enabled { x.warp_target - 1 } else { self.num_layers }).collect();
 
@@ -53,7 +63,7 @@ impl ShapeGenerator {
         }
 
         elevation = self.radius * (1.0 + elevation);
-        (point_on_sphere * elevation, elevation)
+        elevation
     }
 
     pub fn get_warped_pos(&self, p: Vec3, warp_source: &NoiseLayer) -> Vec3 {

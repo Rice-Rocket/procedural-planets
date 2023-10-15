@@ -67,8 +67,8 @@ impl NoiseFilter {
             amp *= self.persistence;
         }
         
-        noise_val = (noise_val - self.offset).max(self.floor - 1.0);
-        noise_val * self.strength
+        noise_val = noise_val;//.max(self.floor - 1.0);
+        noise_val * self.strength - self.offset
     }
 
     pub fn eval_rigid(&self, p: Vec3) -> f32 {
@@ -88,8 +88,8 @@ impl NoiseFilter {
             amp *= self.persistence;
         }
         
-        noise_val = (noise_val - self.offset).max(self.floor - 1.0);
-        noise_val * self.strength
+        noise_val = noise_val;//.max(self.floor - 1.0);
+        noise_val * self.strength - self.offset
     }
 }
 

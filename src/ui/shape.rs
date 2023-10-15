@@ -130,7 +130,7 @@ pub fn shape_settings(
                 ui.horizontal(|ui| {
                     ui.label("Vertical Offset:");
                     let old = layer.filter.offset;
-                    ui.add(egui::widgets::DragValue::new(&mut layer.filter.offset).clamp_range(0f32..=1f32).min_decimals(2).speed(0.025));
+                    ui.add(egui::widgets::DragValue::new(&mut layer.filter.offset).clamp_range(0f32..=100f32).min_decimals(2).speed(0.025));
                     changed = changed || (old != layer.filter.offset);
                 });
                 

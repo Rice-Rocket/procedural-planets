@@ -98,9 +98,11 @@ pub fn generate_mesh(
             mesh.remove_attribute(Mesh::ATTRIBUTE_UV_0);
             mesh.set_indices(None);
 
-            let mut vertices = vec![Vec3::ZERO; (planet.resolution * planet.resolution) as usize];
+            let num_triangles = ((planet.resolution - 1) * (planet.resolution - 1) * 2) as usize;
+            let mut positions = vec![Vec3::ZERO; (planet.resolution * planet.resolution) as usize];
             let mut uvs = vec![Vec2::ZERO; (planet.resolution * planet.resolution) as usize];
-            let mut triangles = vec![0u32; ((planet.resolution - 1) * (planet.resolution - 1) * 6) as usize];
+            let mut normals = vec![Vec3::ZERO; (planet.resolution * planet.resolution) as usize];
+            let mut indices = vec![0u32; num_triangles * 3];
             let mut tri_index = 0;
     
             for y in 0u32..planet.resolution {
@@ -110,7 +112,7 @@ pub fn generate_mesh(
 
                     let point_on_cube = face.local_up + (uv.x - 0.5) * 2.0 * face.axis_a + (uv.y - 0.5) * 2.0 * face.axis_b;
                     let point_on_sphere = point_on_cube.normalize();
-                    let (position, elevation) = shape_gen.get_point_on_planet(point_on_sphere);
+                    let (position, elevation) = shape_gen.get_point_and_elevation(point_on_sphere);
 
                     if elevation > max_elevation {
                         max_elevation = elevation;
@@ -119,28 +121,44 @@ pub fn generate_mesh(
                         min_elevation = elevation;
                     }
 
-                    vertices[i as usize] = position;
+                    positions[i as usize] = position;
                     uvs[i as usize] = uv;
     
                     if x != planet.resolution - 1 && y != planet.resolution - 1 {
-                        triangles[tri_index] = i;
-                        triangles[tri_index + 1] = i + planet.resolution + 1;
-                        triangles[tri_index + 2] = i + planet.resolution;
+                        indices[tri_index] = i;
+                        indices[tri_index + 1] = i + planet.resolution + 1;
+                        indices[tri_index + 2] = i + planet.resolution;
     
-                        triangles[tri_index + 3] = i;
-                        triangles[tri_index + 4] = i + 1;
-                        triangles[tri_index + 5] = i + planet.resolution + 1;
+                        indices[tri_index + 3] = i;
+                        indices[tri_index + 4] = i + 1;
+                        indices[tri_index + 5] = i + planet.resolution + 1;
     
                         tri_index += 6;
                     }
                 }
             }
+
+            for i in 0..num_triangles {
+                let i0 = indices[i * 3 + 0] as usize;
+                let i1 = indices[i * 3 + 1] as usize;
+                let i2 = indices[i * 3 + 2] as usize;
+
+                let p0 = positions[i0];
+                let p1 = positions[i1];
+                let p2 = positions[i2];
+
+                let face_normal = (p1 - p0).cross(p2 - p0);
+                normals[i0] += face_normal;
+                normals[i1] += face_normal;
+                normals[i2] += face_normal;
+            }
+
+            normals = normals.iter().map(|x| x.normalize()).collect();
     
-            mesh.insert_attribute(Mesh::ATTRIBUTE_POSITION, vertices);
+            mesh.insert_attribute(Mesh::ATTRIBUTE_POSITION, positions);
             mesh.insert_attribute(Mesh::ATTRIBUTE_UV_0, uvs);
-            mesh.set_indices(Some(Indices::U32(triangles)));
-            mesh.duplicate_vertices();
-            mesh.compute_flat_normals();
+            mesh.insert_attribute(Mesh::ATTRIBUTE_NORMAL, normals);
+            mesh.set_indices(Some(Indices::U32(indices)));
         }
 
         for mat_handle in face_materials.iter() {
