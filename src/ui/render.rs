@@ -154,7 +154,7 @@ pub fn render_settings(
 
             ui.horizontal(|ui| {
                 ui.label("Ocean Smoothness:");
-                ui.add(egui::DragValue::new(&mut settings.ocean_smoothness).speed(0.05).min_decimals(2).clamp_range(0f32..=1f32));
+                ui.add(egui::DragValue::new(&mut settings.ocean_smoothness).speed(0.01).min_decimals(2).clamp_range(0f32..=0.99f32));
             });
 
             ui.horizontal(|ui| {

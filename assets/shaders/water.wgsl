@@ -5,6 +5,8 @@
 #import bevy_pbr::pbr_functions as pbr_functions
 #import bevy_pbr::mesh_view_types
 
+const PI: f32 = 3.1415927;
+
 struct OceanMaterial {
     radius: f32,
     depth_mul: f32,
@@ -24,6 +26,9 @@ struct OceanMaterial {
 @group(1) @binding(3) var wave_normals_texture_2: texture_2d<f32>;
 @group(1) @binding(4) var wave_normals_sampler_2: sampler;
 
+fn lerp(a: f32, b: f32, t: f32) -> f32 {
+    return a + (b - a) * t;
+}
 
 fn lerp3(a: vec3<f32>, b: vec3<f32>, t: f32) -> vec3<f32> {
     return a + (b - a) * t;
@@ -100,6 +105,16 @@ fn triplanar_normal(pos: vec3<f32>, normal: vec3<f32>, scale: f32, offset: vec2<
     );
 }
 
+fn fresnel(normal: vec3<f32>, incident: vec3<f32>) -> f32 {
+    let n1 = 1.0; // air index of refraction
+    let n2 = 1.33; // water index of refraction
+
+    let r0 = ((n1 - n2) / (n1 + n2)) * ((n1 - n2) / (n1 + n2));
+    let cos_x = -dot(normal, incident);
+    let x = 1.0 - cos_x;
+    return lerp(r0, 1.0, x * x * x * x * x);
+}
+
 
 @fragment
 fn fragment(in: MeshVertexOutput) -> @location(0) vec4<f32> {
@@ -132,12 +147,41 @@ fn fragment(in: MeshVertexOutput) -> @location(0) vec4<f32> {
         for (var i = 0u; i < view_bindings::lights.n_directional_lights; i++) {
             let directional_light = view_bindings::lights.directional_lights[i];
             let to_light = directional_light.direction_to_light;
-            let spec_angle = acos(dot(normalize(to_light - ray_dir), ocean_normal));
-            let spec_exponent = spec_angle / (1.0 - ocean.smoothness);
-            let spec_highlight = exp(-spec_exponent * spec_exponent);
             let diffuse = saturate(dot(ocean_sphere_normal, to_light));
+
+            let half_angle = normalize(to_light - ray_dir);
+            let spec_angle = acos(dot(half_angle, ocean_normal));
+
+            // gaussian distribution
+            // let spec_exponent = spec_angle / (1.0 - ocean.smoothness);
+            // let specular = exp(-spec_exponent * spec_exponent);
+
+            // beckmann distribution
+            let tan_spec_angle = tan(spec_angle);
+            let cos_spec_angle = cos(spec_angle);
+            let tan2_spec_angle = tan_spec_angle * tan_spec_angle;
+            let cos4_spec_angle = cos_spec_angle * cos_spec_angle * cos_spec_angle * cos_spec_angle;
+            let roughness = (1.0 - ocean.smoothness) * (1.0 - ocean.smoothness);
+            let spec_highlight = exp(-tan2_spec_angle / roughness) / (PI * roughness * cos4_spec_angle);
+
+            let n_dot_h = dot(half_angle, ocean_normal);
+            let v_dot_n = dot(ray_dir, ocean_normal);
+            let v_dot_h = dot(ray_dir, half_angle);
+            let l_dot_n = dot(to_light, ocean_normal);
+
+            let view_attenuation = (2.0 * n_dot_h * v_dot_n) / v_dot_h;
+            let light_attenuation = (2.0 * n_dot_h * l_dot_n) / v_dot_h;
+            let geometric_attenuation = min(1.0, min(view_attenuation, light_attenuation));
+
+            let fresnel = saturate(fresnel(ocean_normal, ray_dir));
+            let reflected_dir = reflect(ray_dir, ocean_normal);
+            let reflected_col = dot(reflected_dir, to_light);
+
+            // cook-torrance model
+            let specular = (spec_highlight * fresnel * geometric_attenuation) / (4.0 * v_dot_n * l_dot_n);
+
             ocean_col *= vec3(diffuse);
-            ocean_col += spec_highlight * directional_light.color.xyz;
+            ocean_col += specular * directional_light.color.xyz;
         }
 
         return vec4(ocean_col, alpha);
