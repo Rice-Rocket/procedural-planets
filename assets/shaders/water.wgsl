@@ -5,9 +5,6 @@
 #import bevy_pbr::pbr_functions as pbr_functions
 #import bevy_pbr::mesh_view_types
 
-@group(0) @binding(0) var screen_texture: texture_2d<f32>;
-@group(0) @binding(1) var texture_sampler: sampler;
-
 struct OceanMaterial {
     radius: f32,
     depth_mul: f32,
@@ -15,9 +12,17 @@ struct OceanMaterial {
     smoothness: f32,
     color_1: vec4<f32>,
     color_2: vec4<f32>,
+    time: f32,
+    wave_strength: f32,
+    wave_speed: f32,
+    wave_scale: f32,
 }
 
 @group(1) @binding(0) var<uniform> ocean: OceanMaterial;
+@group(1) @binding(1) var wave_normals_texture_1: texture_2d<f32>;
+@group(1) @binding(2) var wave_normals_sampler_1: sampler;
+@group(1) @binding(3) var wave_normals_texture_2: texture_2d<f32>;
+@group(1) @binding(4) var wave_normals_sampler_2: sampler;
 
 
 fn lerp3(a: vec3<f32>, b: vec3<f32>, t: f32) -> vec3<f32> {
@@ -51,6 +56,50 @@ fn ray_sphere_intersection(center: vec3<f32>, radius: f32, ro: vec3<f32>, rd: ve
     return vec2(0.0, 0.0);
 }
 
+fn unpack_normal(normal: vec4<f32>) -> vec3<f32> {
+    return normal.xyz * 2.0 - 0.5;
+}
+
+fn blend_rnm(a: vec3<f32>, b: vec3<f32>) -> vec3<f32> {
+    var n1 = a;
+    var n2 = b;
+
+    n1.z += 1.0;
+    n2 *= vec3(-1.0, -1.0, 1.0);
+
+    return n1 * dot(n1, n2) / n1.z - n2;
+}
+
+fn triplanar_normal(pos: vec3<f32>, normal: vec3<f32>, scale: f32, offset: vec2<f32>, map_texture: texture_2d<f32>, map_sampler: sampler) -> vec3<f32> {
+    let abs_normal = abs(normal);
+
+    var blend_weight = saturate(normal * normal * normal * normal);
+    blend_weight /= dot(blend_weight, vec3(1.0));
+
+    let uv_x = pos.zy * scale + offset;
+    let uv_y = pos.xz * scale + offset;
+    let uv_z = pos.xy * scale + offset;
+
+    var tan_normal_x = unpack_normal(textureSample(map_texture, map_sampler, fract(uv_x)));
+    var tan_normal_y = unpack_normal(textureSample(map_texture, map_sampler, fract(uv_y)));
+    var tan_normal_z = unpack_normal(textureSample(map_texture, map_sampler, fract(uv_z)));
+
+    tan_normal_x = blend_rnm(vec3(normal.zy, abs_normal.x), tan_normal_x);
+    tan_normal_y = blend_rnm(vec3(normal.xz, abs_normal.y), tan_normal_y);
+    tan_normal_z = blend_rnm(vec3(normal.xy, abs_normal.z), tan_normal_z);
+
+    let axis_sign = sign(normal);
+    tan_normal_x.z *= axis_sign.x;
+    tan_normal_y.z *= axis_sign.y;
+    tan_normal_z.z *= axis_sign.z;
+
+    return normalize(
+        tan_normal_x.zyx * blend_weight.x +
+        tan_normal_y.xzy * blend_weight.y +
+        tan_normal_z.xyz * blend_weight.z
+    );
+}
+
 
 @fragment
 fn fragment(in: MeshVertexOutput) -> @location(0) vec4<f32> {
@@ -67,22 +116,29 @@ fn fragment(in: MeshVertexOutput) -> @location(0) vec4<f32> {
     let ocean_view_depth = min(dst_thru_ocean, scene_depth - linearize_depth(in.position.z));
 
     if (ocean_view_depth > 0.0) {
-        let ocean_normal = normalize(ray_pos + ray_dir * dst_to_ocean);
+        let ocean_hit_pos = ray_pos + ray_dir * dst_to_ocean;
+        let ocean_sphere_normal = normalize(ocean_hit_pos);
 
-        var incoming_light = 1.0;
-        for (var i = 0u; i < view_bindings::lights.n_directional_lights; i++) {
-            let to_light = view_bindings::lights.directional_lights[i].direction_to_light;
-            let spec_angle = acos(dot(normalize(to_light - ray_dir), ocean_normal));
-            let spec_exponent = spec_angle / (1.0 - ocean.smoothness);
-            let spec_highlight = exp(-spec_exponent * spec_exponent);
-            let diffuse = saturate(dot(ocean_normal, to_light));
-            incoming_light *= diffuse;
-            incoming_light += spec_highlight;
-        }
+        let wave_offset_1 = vec2(ocean.time * ocean.wave_speed, ocean.time * ocean.wave_speed * 0.8);
+        let wave_offset_2 = vec2(ocean.time * ocean.wave_speed * -0.8, ocean.time * ocean.wave_speed * -0.3);
+        var wave_normal = triplanar_normal(ocean_hit_pos, ocean_sphere_normal, ocean.wave_scale, wave_offset_1, wave_normals_texture_1, wave_normals_sampler_1);
+        wave_normal = triplanar_normal(ocean_hit_pos, wave_normal, ocean.wave_scale, wave_offset_2, wave_normals_texture_2, wave_normals_sampler_2);
+        let ocean_normal = normalize(lerp3(ocean_sphere_normal, wave_normal, ocean.wave_strength));
 
         let optical_depth = 1.0 - exp(-ocean_view_depth * ocean.depth_mul);
         let alpha = 1.0 - exp(-ocean_view_depth * ocean.alpha_mul);
-        let ocean_col = lerp3(ocean.color_2.xyz, ocean.color_1.xyz, optical_depth) * max(0.01, incoming_light);
+        var ocean_col = lerp3(ocean.color_2.xyz, ocean.color_1.xyz, optical_depth);
+
+        for (var i = 0u; i < view_bindings::lights.n_directional_lights; i++) {
+            let directional_light = view_bindings::lights.directional_lights[i];
+            let to_light = directional_light.direction_to_light;
+            let spec_angle = acos(dot(normalize(to_light - ray_dir), ocean_normal));
+            let spec_exponent = spec_angle / (1.0 - ocean.smoothness);
+            let spec_highlight = exp(-spec_exponent * spec_exponent);
+            let diffuse = saturate(dot(ocean_sphere_normal, to_light));
+            ocean_col *= vec3(diffuse);
+            ocean_col += spec_highlight * directional_light.color.xyz;
+        }
 
         return vec4(ocean_col, alpha);
     }

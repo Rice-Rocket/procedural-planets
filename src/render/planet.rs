@@ -104,7 +104,7 @@ pub fn generate_mesh(
             let mut normals = vec![Vec3::ZERO; (planet.resolution * planet.resolution) as usize];
             let mut indices = vec![0u32; num_triangles * 3];
             let mut tri_index = 0;
-    
+
             for y in 0u32..planet.resolution {
                 for x in 0u32..planet.resolution {
                     let i = y * planet.resolution + x;

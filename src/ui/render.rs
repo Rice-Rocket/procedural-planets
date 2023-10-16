@@ -18,6 +18,12 @@ pub struct UiRenderSettings {
     pub ocean_color_1: [f32; 3],
     pub ocean_color_2: [f32; 3],
 
+    pub waves_normal_map_1: u32,
+    pub waves_normal_map_2: u32,
+    pub wave_strength: f32,
+    pub wave_scale: f32,
+    pub wave_speed: f32,
+
     #[serde(skip)]
     pub load_path: String,
     #[serde(skip)]
@@ -36,6 +42,13 @@ impl Default for UiRenderSettings {
             ocean_smoothness: 1.0,
             ocean_color_1: [0.0; 3],
             ocean_color_2: [1.0; 3],
+
+            wave_strength: 0.3,
+            wave_scale: 2.0,
+            wave_speed: 0.1,
+            waves_normal_map_1: 1,
+            waves_normal_map_2: 1,
+
             load_path: String::from(""),
             save_path: String::from(""),
         }
@@ -119,38 +132,50 @@ pub fn render_settings(
 
         ui.separator();
 
-        ui.horizontal(|ui| {
-            ui.label("Ocean Elevation:");
-            ui.add(egui::DragValue::new(&mut settings.ocean_radius).speed(0.025).min_decimals(2).clamp_range(0f32..=100f32));
-            if shape_gen.sea_level != settings.ocean_radius {
-                shape_gen.sea_level = settings.ocean_radius;
-                update_planet_mesh_evw.send(UpdatePlanetMesh {});
-            }
+        ui.collapsing("Ocean", |ui| {
+            ui.horizontal(|ui| {
+                ui.label("Ocean Elevation:");
+                ui.add(egui::DragValue::new(&mut settings.ocean_radius).speed(0.025).min_decimals(2).clamp_range(0f32..=100f32));
+                if shape_gen.sea_level != settings.ocean_radius {
+                    shape_gen.sea_level = settings.ocean_radius;
+                    update_planet_mesh_evw.send(UpdatePlanetMesh {});
+                }
+            });
+
+            ui.horizontal(|ui| {
+                ui.label("Ocean Depth Multiplier:");
+                ui.add(egui::DragValue::new(&mut settings.ocean_depth_mul).speed(0.05).min_decimals(2).clamp_range(0f32..=100f32));
+            });
+
+            ui.horizontal(|ui| {
+                ui.label("Ocean Alpha Multiplier:");
+                ui.add(egui::DragValue::new(&mut settings.ocean_alpha_mul).speed(0.05).min_decimals(2).clamp_range(0f32..=100f32));
+            });
+
+            ui.horizontal(|ui| {
+                ui.label("Ocean Smoothness:");
+                ui.add(egui::DragValue::new(&mut settings.ocean_smoothness).speed(0.05).min_decimals(2).clamp_range(0f32..=1f32));
+            });
+
+            ui.horizontal(|ui| {
+                ui.label("Ocean Deep Color:");
+                egui::color_picker::color_edit_button_rgb(ui, &mut settings.ocean_color_1);
+            });
+
+            ui.horizontal(|ui| {
+                ui.label("Ocean Shallow Color:");
+                egui::color_picker::color_edit_button_rgb(ui, &mut settings.ocean_color_2);
+            });
         });
 
-        ui.horizontal(|ui| {
-            ui.label("Ocean Depth Multiplier:");
-            ui.add(egui::DragValue::new(&mut settings.ocean_depth_mul).speed(0.05).min_decimals(2).clamp_range(0f32..=100f32));
-        });
+        ui.separator();
 
-        ui.horizontal(|ui| {
-            ui.label("Ocean Alpha Multiplier:");
-            ui.add(egui::DragValue::new(&mut settings.ocean_alpha_mul).speed(0.05).min_decimals(2).clamp_range(0f32..=100f32));
-        });
-
-        ui.horizontal(|ui| {
-            ui.label("Ocean Smoothness:");
-            ui.add(egui::DragValue::new(&mut settings.ocean_smoothness).speed(0.05).min_decimals(2).clamp_range(0f32..=1f32));
-        });
-
-        ui.horizontal(|ui| {
-            ui.label("Ocean Deep Color:");
-            egui::color_picker::color_edit_button_rgb(ui, &mut settings.ocean_color_1);
-        });
-
-        ui.horizontal(|ui| {
-            ui.label("Ocean Shallow Color:");
-            egui::color_picker::color_edit_button_rgb(ui, &mut settings.ocean_color_2);
+        ui.collapsing("Normal Maps", |ui| {
+            ui.add(egui::DragValue::new(&mut settings.waves_normal_map_1).clamp_range(1..=3).max_decimals(0).speed(0.05).prefix("Wave Normal Map 1: "));
+            ui.add(egui::DragValue::new(&mut settings.waves_normal_map_2).clamp_range(1..=3).max_decimals(0).speed(0.05).prefix("Wave Normal Map 2: "));
+            ui.add(egui::DragValue::new(&mut settings.wave_strength).clamp_range(0f32..=1f32).min_decimals(2).speed(0.025).prefix("Wave Strength: "));
+            ui.add(egui::DragValue::new(&mut settings.wave_scale).clamp_range(0f32..=100f32).min_decimals(2).speed(0.025).prefix("Wave Scale: "));
+            ui.add(egui::DragValue::new(&mut settings.wave_speed).clamp_range(0f32..=100f32).min_decimals(2).speed(0.025).prefix("Wave Speed: "));
         });
     });
 }
