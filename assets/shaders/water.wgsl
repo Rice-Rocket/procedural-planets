@@ -147,9 +147,10 @@ fn fragment(in: MeshVertexOutput) -> @location(0) vec4<f32> {
         for (var i = 0u; i < view_bindings::lights.n_directional_lights; i++) {
             let directional_light = view_bindings::lights.directional_lights[i];
             let to_light = directional_light.direction_to_light;
+            let to_eye = -ray_dir;
             let diffuse = saturate(dot(ocean_sphere_normal, to_light));
 
-            let half_angle = normalize(to_light - ray_dir);
+            let half_angle = normalize(to_light + to_eye);
             let spec_angle = acos(dot(half_angle, ocean_normal));
 
             // gaussian distribution
@@ -164,17 +165,18 @@ fn fragment(in: MeshVertexOutput) -> @location(0) vec4<f32> {
             let roughness = (1.0 - ocean.smoothness) * (1.0 - ocean.smoothness);
             let spec_highlight = exp(-tan2_spec_angle / roughness) / (PI * roughness * cos4_spec_angle);
 
+            // Geometric distribution (describes selfshadowing from microfacets)
             let n_dot_h = dot(half_angle, ocean_normal);
-            let v_dot_n = dot(ray_dir, ocean_normal);
-            let v_dot_h = dot(ray_dir, half_angle);
+            let v_dot_n = dot(to_eye, ocean_normal);
+            let v_dot_h = dot(to_eye, half_angle);
             let l_dot_n = dot(to_light, ocean_normal);
 
             let view_attenuation = (2.0 * n_dot_h * v_dot_n) / v_dot_h;
             let light_attenuation = (2.0 * n_dot_h * l_dot_n) / v_dot_h;
             let geometric_attenuation = min(1.0, min(view_attenuation, light_attenuation));
 
-            let fresnel = saturate(fresnel(ocean_normal, ray_dir));
-            let reflected_dir = reflect(ray_dir, ocean_normal);
+            let fresnel = saturate(fresnel(ocean_normal, to_eye));
+            let reflected_dir = reflect(to_eye, ocean_normal);
             let reflected_col = dot(reflected_dir, to_light);
 
             // cook-torrance model
