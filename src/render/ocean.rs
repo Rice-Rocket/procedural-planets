@@ -2,9 +2,6 @@ use bevy::{prelude::*, reflect::{TypeUuid, TypePath}, render::render_resource::A
 
 use crate::ui::render::UiRenderSettings;
 
-// ! IDEA: to get depth prepass in post processing shader, just pass in the depth
-// ! texture manually, following bevy's source code
-
 
 
 #[derive(AsBindGroup, Debug, Clone, TypeUuid, TypePath)]
@@ -30,7 +27,7 @@ pub struct OceanMaterial {
     pub wave_speed: f32,
     #[uniform(0)]
     pub wave_scale: f32,
-    
+
     #[texture(1)]
     #[sampler(2)]
     pub wave_normals_1: Option<Handle<Image>>,
@@ -43,7 +40,7 @@ pub struct OceanMaterial {
 
 impl Material for OceanMaterial {
     fn fragment_shader() -> bevy::render::render_resource::ShaderRef {
-        "shaders/water.wgsl".into()
+        "shaders/ocean.wgsl".into()
     }
     fn alpha_mode(&self) -> AlphaMode {
         AlphaMode::Blend
@@ -66,7 +63,7 @@ impl Default for OceanMaterial {
             wave_normals_1: None,
             wave_normals_2: None,
             selected_normal_map_1: 1,
-            selected_normal_map_2: 1,
+            selected_normal_map_2: 2,
         }
     }
 }

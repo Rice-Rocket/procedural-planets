@@ -19,6 +19,7 @@ impl Plugin for UIPlugin {
         app
             .init_resource::<UiRenderSettings>()
             .init_resource::<UiColorSettings>()
+            .init_resource::<UiVisibility>()
             .add_systems(Startup, spawn_camera)
             .add_systems(Update, (
                 pan_orbit_camera,

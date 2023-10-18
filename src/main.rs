@@ -1,4 +1,4 @@
-use bevy::{prelude::*, pbr::wireframe::WireframePlugin};
+use bevy::{prelude::*, pbr::wireframe::WireframePlugin, core_pipeline::experimental::taa::TemporalAntiAliasPlugin};
 
 pub mod gen;
 pub mod render;
@@ -22,5 +22,7 @@ fn main() {
         .add_plugins(WireframePlugin)
         .add_plugins(EguiPlugin)
         .add_plugins((GeneratorPlugin, RenderPlugin, UIPlugin))
+        .insert_resource(Msaa::Off)
+        .add_plugins(TemporalAntiAliasPlugin)
         .run();
 }

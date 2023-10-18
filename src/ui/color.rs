@@ -4,6 +4,8 @@ use serde::{Serialize, Deserialize};
 
 use crate::render::{planet::UpdatePlanetMaterials, planet_mat::ColorGradient};
 
+use super::render::UiVisibility;
+
 #[derive(Resource, Serialize, Deserialize, Clone)]
 pub struct UiColorSettings {
     pub num_colors: usize,
@@ -23,7 +25,10 @@ pub fn color_settings(
     mut contexts: EguiContexts,
     mut settings: ResMut<UiColorSettings>,
     mut update_planet_mats_evw: EventWriter<UpdatePlanetMaterials>,
+    ui_visibility: Res<UiVisibility>,
 ) {
+    if *ui_visibility != UiVisibility::Visible { return };
+
     let mut changed = false;
 
     egui::Window::new("Color Settings").show(contexts.ctx_mut(), |ui| {

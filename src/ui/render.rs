@@ -6,6 +6,14 @@ use crate::{render::planet::{UpdatePlanetMesh, Planet, UpdatePlanetMaterials}, g
 
 use super::{save::{SaveState, restore_save}, color::UiColorSettings};
 
+#[derive(Resource, Default, PartialEq)]
+pub enum UiVisibility {
+    Hidden,
+    #[default]
+    Visible,
+}
+
+
 #[derive(Resource, Serialize, Deserialize, Clone)]
 pub struct UiRenderSettings {
     pub planet_resolution: u32,
@@ -17,6 +25,13 @@ pub struct UiRenderSettings {
     pub ocean_smoothness: f32,
     pub ocean_color_1: [f32; 3],
     pub ocean_color_2: [f32; 3],
+
+    pub atmosphere_radius: f32,
+    pub atmosphere_sample_points: u32,
+    pub atmosphere_optical_depth_points: u32,
+    pub atmosphere_density_falloff: f32,
+    pub atmosphere_scatter_strength: f32,
+    pub atmosphere_scatter_coeffs: [f32; 3],
 
     pub waves_normal_map_1: u32,
     pub waves_normal_map_2: u32,
@@ -47,11 +62,18 @@ impl Default for UiRenderSettings {
             ocean_color_1: [0.0; 3],
             ocean_color_2: [1.0; 3],
 
+            atmosphere_radius: 1.5,
+            atmosphere_sample_points: 10,
+            atmosphere_optical_depth_points: 10,
+            atmosphere_density_falloff: 4.0,
+            atmosphere_scatter_strength: 20.0,
+            atmosphere_scatter_coeffs: [700.0, 530.0, 440.0],
+
             wave_strength: 0.3,
             wave_scale: 2.0,
             wave_speed: 0.1,
             waves_normal_map_1: 1,
-            waves_normal_map_2: 1,
+            waves_normal_map_2: 2,
 
             surface_normal_map: 1,
             surface_strength: 0.1,
@@ -75,7 +97,18 @@ pub fn render_settings(
     time: Res<Time>,
     mut wireframe_config: ResMut<WireframeConfig>,
     mut last_fps_update: Local<(f32, f32)>,
+    mut ui_visibility: ResMut<UiVisibility>,
+    keys: Res<Input<KeyCode>>,
 ) {
+    if keys.just_pressed(KeyCode::Escape) {
+        *ui_visibility = match *ui_visibility {
+            UiVisibility::Hidden => UiVisibility::Visible,
+            UiVisibility::Visible => UiVisibility::Hidden,
+        };
+    }
+
+    if *ui_visibility != UiVisibility::Visible { return };
+
     egui::Window::new("Settings").show(contexts.ctx_mut(), |ui| {
         let mut fps_value = last_fps_update.0;
         if last_fps_update.1 > 0.25 {
@@ -85,7 +118,7 @@ pub fn render_settings(
         }
         ui.label(format!("FPS: {:.1}", fps_value));
         last_fps_update.1 += time.delta_seconds();
-        ui.label("Press [TAB] to Toggle UI");
+        ui.label("Press [ESC] to Toggle UI");
 
         ui.separator();
 
@@ -142,7 +175,7 @@ pub fn render_settings(
 
         ui.collapsing("Ocean", |ui| {
             ui.horizontal(|ui| {
-                ui.label("Ocean Elevation:");
+                ui.label("Elevation:");
                 ui.add(egui::DragValue::new(&mut settings.ocean_radius).speed(0.025).min_decimals(2).clamp_range(0f32..=100f32));
                 if shape_gen.sea_level != settings.ocean_radius {
                     shape_gen.sea_level = settings.ocean_radius;
@@ -151,28 +184,64 @@ pub fn render_settings(
             });
 
             ui.horizontal(|ui| {
-                ui.label("Ocean Depth Multiplier:");
+                ui.label("Depth Multiplier:");
                 ui.add(egui::DragValue::new(&mut settings.ocean_depth_mul).speed(0.05).min_decimals(2).clamp_range(0f32..=100f32));
             });
 
             ui.horizontal(|ui| {
-                ui.label("Ocean Alpha Multiplier:");
+                ui.label("Alpha Multiplier:");
                 ui.add(egui::DragValue::new(&mut settings.ocean_alpha_mul).speed(0.05).min_decimals(2).clamp_range(0f32..=100f32));
             });
 
             ui.horizontal(|ui| {
-                ui.label("Ocean Smoothness:");
+                ui.label("Smoothness:");
                 ui.add(egui::DragValue::new(&mut settings.ocean_smoothness).speed(0.01).min_decimals(2).clamp_range(0f32..=0.99f32));
             });
 
             ui.horizontal(|ui| {
-                ui.label("Ocean Deep Color:");
+                ui.label("Deep Color:");
                 egui::color_picker::color_edit_button_rgb(ui, &mut settings.ocean_color_1);
             });
 
             ui.horizontal(|ui| {
-                ui.label("Ocean Shallow Color:");
+                ui.label("Shallow Color:");
                 egui::color_picker::color_edit_button_rgb(ui, &mut settings.ocean_color_2);
+            });
+        });
+
+        ui.separator();
+
+        ui.collapsing("Atmosphere", |ui| {
+            ui.horizontal(|ui| {
+                ui.label("Radius:");
+                ui.add(egui::DragValue::new(&mut settings.atmosphere_radius).speed(0.025).min_decimals(2).clamp_range(0f32..=100f32));
+            });
+            
+            ui.horizontal(|ui| {
+                ui.label("Num Sample Points:");
+                ui.add(egui::DragValue::new(&mut settings.atmosphere_sample_points).speed(0.025));
+            });
+            
+            ui.horizontal(|ui| {
+                ui.label("Num Optical Depth Samples:");
+                ui.add(egui::DragValue::new(&mut settings.atmosphere_optical_depth_points).speed(0.025));
+            });
+
+            ui.horizontal(|ui| {
+                ui.label("Density Falloff:");
+                ui.add(egui::DragValue::new(&mut settings.atmosphere_density_falloff).speed(0.025).min_decimals(2).clamp_range(0f32..=100f32));
+            });
+
+            ui.horizontal(|ui| {
+                ui.label("Scattering Strength:");
+                ui.add(egui::DragValue::new(&mut settings.atmosphere_scatter_strength).speed(0.025).min_decimals(2).clamp_range(0f32..=100f32));
+            });
+
+            ui.label("Scattering Coefficients:");
+            ui.indent(1, |ui| {
+                ui.add(egui::DragValue::new(&mut settings.atmosphere_scatter_coeffs[0]).speed(0.25).max_decimals(1).clamp_range(0f32..=1000f32).prefix("Red: "));
+                ui.add(egui::DragValue::new(&mut settings.atmosphere_scatter_coeffs[1]).speed(0.25).max_decimals(1).clamp_range(0f32..=1000f32).prefix("Green: "));
+                ui.add(egui::DragValue::new(&mut settings.atmosphere_scatter_coeffs[2]).speed(0.25).max_decimals(1).clamp_range(0f32..=1000f32).prefix("Blue: "));
             });
         });
 

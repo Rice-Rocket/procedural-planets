@@ -3,13 +3,18 @@ use bevy_egui::{egui, EguiContexts};
 
 use crate::{gen::{shape::ShapeGenerator, noise_filter::{NoiseLayer, NoiseFilterType}}, render::planet::UpdatePlanetMesh};
 
+use super::render::UiVisibility;
+
 
 pub fn shape_settings(
     mut contexts: EguiContexts,
     mut shape_gen: ResMut<ShapeGenerator>,
     mut update_planet_mesh_evw: EventWriter<UpdatePlanetMesh>,
     mut auto_update: Local<bool>,
+    ui_visibility: Res<UiVisibility>,
 ) {
+    if *ui_visibility != UiVisibility::Visible { return };
+
     let mut changed = false;
 
     egui::Window::new("Shape Settings").show(contexts.ctx_mut(), |ui| {
