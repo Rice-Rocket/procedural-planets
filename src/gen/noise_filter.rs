@@ -67,7 +67,7 @@ impl NoiseFilter {
             amp *= self.persistence;
         }
         
-        noise_val = noise_val;//.max(self.floor - 1.0);
+        noise_val = noise_val;
         noise_val * self.strength - self.offset
     }
 
@@ -88,7 +88,7 @@ impl NoiseFilter {
             amp *= self.persistence;
         }
         
-        noise_val = noise_val;//.max(self.floor - 1.0);
+        noise_val = noise_val;
         noise_val * self.strength - self.offset
     }
 }

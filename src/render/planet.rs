@@ -2,7 +2,7 @@ use bevy::{prelude::*, render::{mesh::Indices, render_resource::PrimitiveTopolog
 
 use crate::{ui::color::UiColorSettings, gen::shape::ShapeGenerator};
 
-use super::planet_mat::{PlanetMaterial, ColorGradient, ColorEntry};
+use super::planet_mat::{PlanetMaterial, ColorEntry};
 
 
 #[derive(Resource)]
@@ -59,12 +59,7 @@ pub fn spawn_planet(
     let directions = [Vec3::Y, Vec3::NEG_Y, Vec3::X, Vec3::NEG_X, Vec3::Z, Vec3::NEG_Z];
     for i in 0..6 {
         let mesh = meshes.add(Mesh::new(PrimitiveTopology::TriangleList));
-        let mat = PlanetMaterial {
-            min_elevation: 0.0,
-            max_elevation: 0.0,
-            n_colors: 1,
-            colors: [ColorEntry::default(); ColorGradient::RESOLUTION as usize]
-        };
+        let mat = PlanetMaterial::default();
         planet.terrain_faces[i] = commands.spawn((MaterialMeshBundle {
             mesh: mesh.clone(),
             material: materials.add(mat),

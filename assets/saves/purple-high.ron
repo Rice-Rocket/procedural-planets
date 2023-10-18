@@ -147,5 +147,8 @@
         wave_strength: 0.55,
         wave_scale: 4.0,
         wave_speed: 0.1,
+        surface_normal_map: 4,
+        surface_strength: 0.5,
+        surface_scale: 3.8,
     ),
 )

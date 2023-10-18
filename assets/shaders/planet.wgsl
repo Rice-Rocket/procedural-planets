@@ -1,13 +1,5 @@
-#import bevy_pbr::pbr_functions as pbr_functions
-#import bevy_pbr::pbr_bindings as pbr_bindings
-#import bevy_pbr::pbr_types as pbr_types
-
-#import bevy_core_pipeline::tonemapping as tonemapping
-
-#import bevy_pbr::mesh_types MESH_FLAGS_SHADOW_RECEIVER_BIT
-
 #import bevy_pbr::mesh_vertex_output MeshVertexOutput
-#import bevy_pbr::mesh_view_bindings view
+#import bevy_pbr::mesh_view_bindings as view_bindings
 
 struct ColorEntry {
     color: vec3<f32>,
@@ -20,15 +12,17 @@ struct PlanetMaterial {
     min_elevation: f32,
     max_elevation: f32,
     n_colors: u32,
+    normal_strength: f32,
+    normal_scale: f32,
     #ifdef SIXTEEN_BYTE_ALIGNMENT
-    _webgl2_padding: f32,
+    _webgl2_padding: vec3<f32>,
     #endif
 };
 
-@group(1) @binding(0)
-var<uniform> planet: PlanetMaterial;
-@group(1) @binding(1)
-var<storage, read> colors: array<ColorEntry>;
+@group(1) @binding(0) var<uniform> planet: PlanetMaterial;
+@group(1) @binding(1) var<storage, read> colors: array<ColorEntry>;
+@group(1) @binding(2) var surface_normals_texture: texture_2d<f32>;
+@group(1) @binding(3) var surface_normals_sampler: sampler;
 
 
 fn lerp3(a: vec3<f32>, b: vec3<f32>, t: f32) -> vec3<f32> {
@@ -39,16 +33,53 @@ fn inv_lerp(v: f32, a: f32, b: f32) -> f32 {
     return saturate((v - a) / (b - a));
 }
 
+fn unpack_normal(normal: vec4<f32>) -> vec3<f32> {
+    return normal.xyz * 2.0 - 0.5;
+}
+
+fn blend_rnm(a: vec3<f32>, b: vec3<f32>) -> vec3<f32> {
+    var n1 = a;
+    var n2 = b;
+
+    n1.z += 1.0;
+    n2 *= vec3(-1.0, -1.0, 1.0);
+
+    return n1 * dot(n1, n2) / n1.z - n2;
+}
+
+fn triplanar_normal(pos: vec3<f32>, normal: vec3<f32>, scale: f32, offset: vec2<f32>, map_texture: texture_2d<f32>, map_sampler: sampler) -> vec3<f32> {
+    let abs_normal = abs(normal);
+
+    var blend_weight = saturate(normal * normal * normal * normal);
+    blend_weight /= dot(blend_weight, vec3(1.0));
+
+    let uv_x = pos.zy * scale + offset;
+    let uv_y = pos.xz * scale + offset;
+    let uv_z = pos.xy * scale + offset;
+
+    var tan_normal_x = unpack_normal(textureSample(map_texture, map_sampler, fract(uv_x)));
+    var tan_normal_y = unpack_normal(textureSample(map_texture, map_sampler, fract(uv_y)));
+    var tan_normal_z = unpack_normal(textureSample(map_texture, map_sampler, fract(uv_z)));
+
+    tan_normal_x = blend_rnm(vec3(normal.zy, abs_normal.x), tan_normal_x);
+    tan_normal_y = blend_rnm(vec3(normal.xz, abs_normal.y), tan_normal_y);
+    tan_normal_z = blend_rnm(vec3(normal.xy, abs_normal.z), tan_normal_z);
+
+    let axis_sign = sign(normal);
+    tan_normal_x.z *= axis_sign.x;
+    tan_normal_y.z *= axis_sign.y;
+    tan_normal_z.z *= axis_sign.z;
+
+    return normalize(
+        tan_normal_x.zyx * blend_weight.x +
+        tan_normal_y.xzy * blend_weight.y +
+        tan_normal_z.xyz * blend_weight.z
+    );
+}
+
 
 @fragment
 fn fragment(in: MeshVertexOutput) -> @location(0) vec4<f32> {
-
-    // * Get planet color
-
-    // ! Consider steepness/elevation as 2d space. 
-    // ! Basically, make the thing interpolate in a 2d texture
-    // ! ^^^ Just an idea
-    
     let elevation = length(in.world_position.xyz);
     let norm_elevation = inv_lerp(elevation, planet.min_elevation, planet.max_elevation);
 
@@ -69,34 +100,16 @@ fn fragment(in: MeshVertexOutput) -> @location(0) vec4<f32> {
         amount += strength;
     }
 
-    // * Get Built in Bevy PBR Result
+    var surface_normal = in.world_normal.xyz;
+    let surface_bumps = triplanar_normal(in.world_position.xyz, surface_normal, planet.normal_scale, vec2(0.0), surface_normals_texture, surface_normals_sampler);
+    surface_normal = normalize(lerp3(surface_normal, surface_bumps, planet.normal_strength));
 
-    var uv = in.uv;
-    let is_orthographic = false;
-    var pbr_in = pbr_functions::pbr_input_new();
-    pbr_in.flags = MESH_FLAGS_SHADOW_RECEIVER_BIT;
+    for (var i = 0u; i < view_bindings::lights.n_directional_lights; i++) {
+        let directional_light = view_bindings::lights.directional_lights[i];
+        let to_light = directional_light.direction_to_light;
+        let diffuse = saturate(dot(surface_normal, to_light));
+        planet_col *= diffuse;
+    }
 
-    pbr_in.material.base_color = vec4(planet_col, 1.0);
-    pbr_in.material.emissive = vec4(0., 0., 0., 1.);
-
-    pbr_in.material.metallic = 0.0;
-    pbr_in.material.perceptual_roughness = 0.8;
-    pbr_in.material.reflectance = 0.3;
-
-    pbr_in.frag_coord = in.position;
-    pbr_in.world_position = in.world_position;
-    pbr_in.world_normal = pbr_functions::prepare_world_normal(
-        in.world_normal,
-        (pbr_in.material.flags & pbr_types::STANDARD_MATERIAL_FLAGS_DOUBLE_SIDED_BIT) != 0u,
-        true, 
-    );
-
-    pbr_in.N = pbr_functions::apply_normal_mapping(pbr_in.material.flags, pbr_in.world_normal, in.uv, view.mip_bias);
-    pbr_in.V = pbr_functions::calculate_view(in.world_position, is_orthographic);
-
-    var pbr_result = pbr_functions::pbr(pbr_in);
-
-    pbr_result = tonemapping::tone_mapping(pbr_result, view.color_grading);
-
-    return pbr_result;
+    return vec4(planet_col, 1.0);
 }

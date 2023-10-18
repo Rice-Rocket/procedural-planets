@@ -1,6 +1,8 @@
 use bevy::{prelude::*, reflect::{TypeUuid, TypePath}, render::render_resource::{AsBindGroup, ShaderType}};
 use serde::{Serialize, Deserialize};
 
+use crate::ui::render::UiRenderSettings;
+
 #[derive(Debug, Clone, Copy, ShaderType)]
 pub struct ColorEntry {
     pub color: [f32; 3],
@@ -41,13 +43,57 @@ pub struct PlanetMaterial {
     pub max_elevation: f32,
     #[uniform(0)]
     pub n_colors: u32,
+    #[uniform(0)]
+    pub surface_strength: f32,
+    #[uniform(0)]
+    pub surface_scale: f32,
+    
     #[storage(1, read_only)]
     pub colors: [ColorEntry; ColorGradient::RESOLUTION as usize],
+
+    #[texture(2)]
+    #[sampler(3)]
+    pub surface_normal_map: Option<Handle<Image>>,
+    selected_normal_map: u32,
 }
 
 impl Material for PlanetMaterial {
     fn fragment_shader() -> bevy::render::render_resource::ShaderRef {
         "shaders/planet.wgsl".into()
+    }
+}
+
+impl Default for PlanetMaterial {
+    fn default() -> Self {
+        Self {
+            min_elevation: 0.0,
+            max_elevation: 0.0,
+            surface_strength: 0.1,
+            surface_scale: 1.0,
+            n_colors: 1,
+            colors: [ColorEntry::default(); ColorGradient::RESOLUTION as usize],
+            surface_normal_map: None,
+            selected_normal_map: 1,
+        }
+    }
+}
+
+pub fn update_planet_material(
+    mut planet_handles: Query<&Handle<PlanetMaterial>>,
+    mut planet_materials: ResMut<Assets<PlanetMaterial>>,
+    asset_server: Res<AssetServer>,
+    render_settings: Res<UiRenderSettings>,
+) {
+    for mat_handle in planet_handles.iter_mut() {
+        let mat = planet_materials.get_mut(mat_handle).unwrap();
+
+        mat.surface_strength = render_settings.surface_strength;
+        mat.surface_scale = render_settings.surface_scale;
+
+        if mat.surface_normal_map.is_none() || mat.selected_normal_map != render_settings.surface_normal_map {
+            mat.selected_normal_map = render_settings.surface_normal_map;
+            mat.surface_normal_map = Some(asset_server.load(format!("textures/normals/rocks_{}.png", render_settings.surface_normal_map)));
+        }
     }
 }
 

@@ -34,7 +34,8 @@ impl Plugin for RenderPlugin {
                 generate_mesh,
                 generate_materials,
                 update_directional_light,
-                update_ocean
+                update_ocean,
+                update_planet_material,
             ))
         ;
     }

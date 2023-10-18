@@ -30,6 +30,7 @@ pub struct OceanMaterial {
     pub wave_speed: f32,
     #[uniform(0)]
     pub wave_scale: f32,
+    
     #[texture(1)]
     #[sampler(2)]
     pub wave_normals_1: Option<Handle<Image>>,

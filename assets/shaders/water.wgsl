@@ -1,8 +1,6 @@
-#import bevy_pbr::utils
 #import bevy_pbr::mesh_vertex_output MeshVertexOutput
 #import bevy_pbr::mesh_view_bindings as view_bindings
 #import bevy_pbr::prepass_utils as prepass_utils
-#import bevy_pbr::pbr_functions as pbr_functions
 #import bevy_pbr::mesh_view_types
 
 const PI: f32 = 3.1415927;

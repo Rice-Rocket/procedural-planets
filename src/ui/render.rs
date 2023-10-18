@@ -24,6 +24,10 @@ pub struct UiRenderSettings {
     pub wave_scale: f32,
     pub wave_speed: f32,
 
+    pub surface_normal_map: u32,
+    pub surface_strength: f32,
+    pub surface_scale: f32,
+
     #[serde(skip)]
     pub load_path: String,
     #[serde(skip)]
@@ -48,6 +52,10 @@ impl Default for UiRenderSettings {
             wave_speed: 0.1,
             waves_normal_map_1: 1,
             waves_normal_map_2: 1,
+
+            surface_normal_map: 1,
+            surface_strength: 0.1,
+            surface_scale: 1.0,
 
             load_path: String::from(""),
             save_path: String::from(""),
@@ -173,9 +181,16 @@ pub fn render_settings(
         ui.collapsing("Normal Maps", |ui| {
             ui.add(egui::DragValue::new(&mut settings.waves_normal_map_1).clamp_range(1..=3).max_decimals(0).speed(0.05).prefix("Wave Normal Map 1: "));
             ui.add(egui::DragValue::new(&mut settings.waves_normal_map_2).clamp_range(1..=3).max_decimals(0).speed(0.05).prefix("Wave Normal Map 2: "));
+            
             ui.add(egui::DragValue::new(&mut settings.wave_strength).clamp_range(0f32..=1f32).min_decimals(2).speed(0.025).prefix("Wave Strength: "));
             ui.add(egui::DragValue::new(&mut settings.wave_scale).clamp_range(0f32..=100f32).min_decimals(2).speed(0.025).prefix("Wave Scale: "));
             ui.add(egui::DragValue::new(&mut settings.wave_speed).clamp_range(0f32..=100f32).min_decimals(2).speed(0.025).prefix("Wave Speed: "));
+            
+            ui.separator();
+            
+            ui.add(egui::DragValue::new(&mut settings.surface_normal_map).clamp_range(1..=5).max_decimals(0).speed(0.05).prefix("Surface Normal Map: "));
+            ui.add(egui::DragValue::new(&mut settings.surface_strength).clamp_range(0f32..=1f32).min_decimals(2).speed(0.025).prefix("Surface Strength: "));
+            ui.add(egui::DragValue::new(&mut settings.surface_scale).clamp_range(0f32..=100f32).min_decimals(2).speed(0.025).prefix("Surface Scale: "));
         });
     });
 }
