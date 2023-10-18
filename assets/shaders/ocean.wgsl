@@ -1,6 +1,7 @@
 #import bevy_pbr::mesh_vertex_output MeshVertexOutput
 #import bevy_pbr::mesh_view_bindings as view_bindings
 #import bevy_pbr::prepass_utils as prepass_utils
+#import bevy_pbr::shadows as shadows
 #import bevy_pbr::mesh_view_types
 
 const PI: f32 = 3.1415927;
@@ -117,6 +118,12 @@ fn fresnel(normal: vec3<f32>, incident: vec3<f32>) -> f32 {
 @fragment
 fn fragment(in: MeshVertexOutput) -> @location(0) vec4<f32> {
     let view_vector = in.world_position.xyz - view_bindings::view.world_position.xyz;
+    let view_z = dot(vec4(
+        view_bindings::view.inverse_view[0].z,
+        view_bindings::view.inverse_view[1].z,
+        view_bindings::view.inverse_view[2].z,
+        view_bindings::view.inverse_view[3].z,
+    ), in.world_position);
 
     let nonlinear_depth = prepass_utils::prepass_depth(in.position, 0u);
     let scene_depth = linearize_depth(nonlinear_depth);
@@ -146,7 +153,8 @@ fn fragment(in: MeshVertexOutput) -> @location(0) vec4<f32> {
             let directional_light = view_bindings::lights.directional_lights[i];
             let to_light = directional_light.direction_to_light;
             let to_eye = -ray_dir;
-            let diffuse = saturate(dot(ocean_sphere_normal, to_light));
+            let shadow = shadows::fetch_directional_shadow(i, in.world_position, ocean_normal, view_z);
+            let diffuse = saturate(dot(ocean_sphere_normal, to_light)) * shadow;
 
             let half_angle = normalize(to_light + to_eye);
             let spec_angle = acos(dot(half_angle, ocean_normal));
@@ -181,7 +189,7 @@ fn fragment(in: MeshVertexOutput) -> @location(0) vec4<f32> {
             let specular = (spec_highlight * fresnel * geometric_attenuation) / (4.0 * v_dot_n * l_dot_n);
 
             ocean_col *= vec3(diffuse);
-            ocean_col += specular * directional_light.color.xyz;
+            ocean_col += specular * directional_light.color.xyz * shadow;
         }
 
         return vec4(ocean_col, alpha);

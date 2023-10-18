@@ -1,5 +1,6 @@
 #import bevy_pbr::mesh_vertex_output MeshVertexOutput
 #import bevy_pbr::mesh_view_bindings as view_bindings
+#import bevy_pbr::shadows as shadows
 
 struct ColorEntry {
     color: vec3<f32>,
@@ -80,6 +81,13 @@ fn triplanar_normal(pos: vec3<f32>, normal: vec3<f32>, scale: f32, offset: vec2<
 
 @fragment
 fn fragment(in: MeshVertexOutput) -> @location(0) vec4<f32> {
+    let view_z = dot(vec4(
+        view_bindings::view.inverse_view[0].z,
+        view_bindings::view.inverse_view[1].z,
+        view_bindings::view.inverse_view[2].z,
+        view_bindings::view.inverse_view[3].z,
+    ), in.world_position);
+
     let elevation = length(in.world_position.xyz);
     let norm_elevation = inv_lerp(elevation, planet.min_elevation, planet.max_elevation);
 
@@ -107,8 +115,9 @@ fn fragment(in: MeshVertexOutput) -> @location(0) vec4<f32> {
     for (var i = 0u; i < view_bindings::lights.n_directional_lights; i++) {
         let directional_light = view_bindings::lights.directional_lights[i];
         let to_light = directional_light.direction_to_light;
+        let shadow = shadows::fetch_directional_shadow(i, in.world_position, surface_normal, view_z);
         let diffuse = saturate(dot(surface_normal, to_light));
-        planet_col *= diffuse;
+        planet_col *= diffuse * shadow;
     }
 
     return vec4(planet_col, 1.0);
