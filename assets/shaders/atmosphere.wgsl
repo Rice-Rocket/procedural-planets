@@ -1,11 +1,23 @@
-#import bevy_pbr::mesh_vertex_output MeshVertexOutput
-#import bevy_pbr::mesh_view_bindings as view_bindings
-#import bevy_pbr::prepass_utils as prepass_utils
-#import bevy_pbr::mesh_view_types
+#import bevy_core_pipeline::fullscreen_vertex_shader FullscreenVertexOutput
+#import bevy_pbr::mesh_view_types as pbr_types
+#import bevy_render::view View
+
+@group(0) @binding(0)
+var screen_texture: texture_2d<f32>;
+@group(0) @binding(1)
+var depth_texture: texture_depth_2d;
+@group(0) @binding(2)
+var texture_sampler: sampler;
+@group(0) @binding(3)
+var<uniform> atmosphere: AtmosphereSettings;
+@group(0) @binding(4)
+var<uniform> view: View;
+@group(0) @binding(5)
+var<uniform> lights: pbr_types::Lights;
 
 const PI: f32 = 3.1415927;
 
-struct AtmosphereMaterial {
+struct AtmosphereSettings {
     radius: f32,
     ocean_radius: f32,
     num_sample_points: u32,
@@ -17,10 +29,8 @@ struct AtmosphereMaterial {
     #endif
 }
 
-@group(1) @binding(0) var<uniform> atmosphere: AtmosphereMaterial;
-
 fn linearize_depth(depth: f32) -> f32 {
-    return view_bindings::view.projection[3][2] / depth;
+    return view.projection[3][2] / depth;
 }
 
 fn ray_sphere_intersection(center: vec3<f32>, radius: f32, ro: vec3<f32>, rd: vec3<f32>) -> vec2<f32> {
@@ -66,7 +76,7 @@ fn get_light(ray_pos: vec3<f32>, ray_dir: vec3<f32>, ray_length: f32) -> vec4<f3
     var in_scatter_pos = ray_pos;
     var in_scattered_light = vec4(0.0);
     let step_size = ray_length / (f32(atmosphere.num_sample_points) - 1.0);
-    let dir_to_sun = view_bindings::lights.directional_lights[0].direction_to_light;
+    let dir_to_sun = lights.directional_lights[0].direction_to_light;
 
     for (var i = 0u; i < atmosphere.num_sample_points; i++) {
         let sun_ray_length = ray_sphere_intersection(vec3(0.0), atmosphere.radius, in_scatter_pos, dir_to_sun).y;
@@ -84,14 +94,16 @@ fn get_light(ray_pos: vec3<f32>, ray_dir: vec3<f32>, ray_length: f32) -> vec4<f3
 
 
 @fragment
-fn fragment(in: MeshVertexOutput) -> @location(0) vec4<f32> {
-    let view_vector = in.world_position.xyz - view_bindings::view.world_position.xyz;
+fn fragment(in: FullscreenVertexOutput) -> @location(0) vec4<f32> {
+    let old_col = textureLoad(screen_texture, vec2<i32>(in.position.xy), 0);
+    var view_vector = view.inverse_projection * (vec4(in.uv * 2.0 - 1.0, 0.0, 1.0) * vec4(1.0, -1.0, 1.0, 1.0));
+    view_vector = view_vector * view.inverse_view;
 
-    let nonlinear_depth = prepass_utils::prepass_depth(in.position, 0u);
+    let nonlinear_depth = textureLoad(depth_texture, vec2<i32>(in.position.xy), 0);
     let scene_depth = linearize_depth(nonlinear_depth);
 
-    let ray_pos = view_bindings::view.world_position.xyz;
-    let ray_dir = normalize(view_vector);
+    let ray_pos = view.world_position.xyz;
+    let ray_dir = normalize(view_vector.xyz);
 
     let dst_to_ocean = ray_sphere_intersection(vec3(0.0), atmosphere.ocean_radius, ray_pos, ray_dir).x;
     let dst_to_surface = min(scene_depth, dst_to_ocean);
@@ -103,8 +115,10 @@ fn fragment(in: MeshVertexOutput) -> @location(0) vec4<f32> {
     if (dst_thru_atmosphere > 0.0) {
         let hit_pos = ray_pos + ray_dir * dst_to_atmosphere;
         let light = get_light(hit_pos, ray_dir, dst_thru_atmosphere);
-        return light;
+        return vec4(mix(old_col.xyz, light.xyz, light.w), 1.0);
     }
 
-    return vec4(vec3(dst_thru_atmosphere / (atmosphere.radius * 2.0)), 1.0);
+    return old_col;
+    // return vec4(vec3(nonlinear_depth), 1.0);
+    // return vec4(vec3(atmosphere_hit_info.y / (atmosphere.radius * 2.0)), 1.0);
 }
