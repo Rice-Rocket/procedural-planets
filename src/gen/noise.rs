@@ -2,7 +2,7 @@ use bevy::prelude::*;
 
 #[derive(Clone)]
 pub struct NoiseSimplex3d {
-    random: [i32; Self::SIZE as usize * 2],
+    pub random: [i32; Self::SIZE as usize * 2],
 }
 
 impl Default for NoiseSimplex3d {
@@ -28,7 +28,7 @@ impl NoiseSimplex3d {
         181, 199, 106, 157, 184, 84, 204, 176, 115, 121, 50, 45, 127, 4, 150, 254, 138, 236, 205, 93, 222, 114,
         67, 29, 24, 72, 243, 141, 128, 195, 78, 66, 215, 61, 156, 180
     ];
-    const SIZE: u32 = 256;
+    pub const SIZE: u32 = 256;
 
     const F3: f32 = 1.0 / 3.0;
     const G3: f32 = 1.0 / 6.0;

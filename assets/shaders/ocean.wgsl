@@ -25,18 +25,6 @@ struct OceanMaterial {
 @group(1) @binding(3) var wave_normals_texture_2: texture_2d<f32>;
 @group(1) @binding(4) var wave_normals_sampler_2: sampler;
 
-fn lerp(a: f32, b: f32, t: f32) -> f32 {
-    return a + (b - a) * t;
-}
-
-fn lerp3(a: vec3<f32>, b: vec3<f32>, t: f32) -> vec3<f32> {
-    return a + (b - a) * t;
-}
-
-fn lerp4(a: vec4<f32>, b: vec4<f32>, t: f32) -> vec4<f32> {
-    return a + (b - a) * t;
-}
-
 fn linearize_depth(depth: f32) -> f32 {
     return view_bindings::view.projection[3][2] / depth;
 }
@@ -111,7 +99,7 @@ fn fresnel(normal: vec3<f32>, incident: vec3<f32>) -> f32 {
     let r0 = ((n1 - n2) / (n1 + n2)) * ((n1 - n2) / (n1 + n2));
     let cos_x = -dot(normal, incident);
     let x = 1.0 - cos_x;
-    return lerp(r0, 1.0, x * x * x * x * x);
+    return mix(r0, 1.0, x * x * x * x * x);
 }
 
 
@@ -143,11 +131,11 @@ fn fragment(in: MeshVertexOutput) -> @location(0) vec4<f32> {
         let wave_offset_2 = vec2(ocean.time * ocean.wave_speed * -0.8, ocean.time * ocean.wave_speed * -0.3);
         var wave_normal = triplanar_normal(ocean_hit_pos, ocean_sphere_normal, ocean.wave_scale, wave_offset_1, wave_normals_texture_1, wave_normals_sampler_1);
         wave_normal = triplanar_normal(ocean_hit_pos, wave_normal, ocean.wave_scale, wave_offset_2, wave_normals_texture_2, wave_normals_sampler_2);
-        let ocean_normal = normalize(lerp3(ocean_sphere_normal, wave_normal, ocean.wave_strength));
+        let ocean_normal = normalize(mix(ocean_sphere_normal, wave_normal, ocean.wave_strength));
 
         let optical_depth = 1.0 - exp(-ocean_view_depth * ocean.depth_mul);
         let alpha = 1.0 - exp(-ocean_view_depth * ocean.alpha_mul);
-        var ocean_col = lerp3(ocean.color_2.xyz, ocean.color_1.xyz, optical_depth);
+        var ocean_col = mix(ocean.color_2.xyz, ocean.color_1.xyz, optical_depth);
 
         for (var i = 0u; i < view_bindings::lights.n_directional_lights; i++) {
             let directional_light = view_bindings::lights.directional_lights[i];

@@ -19,18 +19,6 @@ struct AtmosphereMaterial {
 
 @group(1) @binding(0) var<uniform> atmosphere: AtmosphereMaterial;
 
-fn lerp(a: f32, b: f32, t: f32) -> f32 {
-    return a + (b - a) * t;
-}
-
-fn lerp3(a: vec3<f32>, b: vec3<f32>, t: f32) -> vec3<f32> {
-    return a + (b - a) * t;
-}
-
-fn lerp4(a: vec4<f32>, b: vec4<f32>, t: f32) -> vec4<f32> {
-    return a + (b - a) * t;
-}
-
 fn linearize_depth(depth: f32) -> f32 {
     return view_bindings::view.projection[3][2] / depth;
 }
@@ -76,8 +64,7 @@ fn optical_depth(ray_pos: vec3<f32>, ray_dir: vec3<f32>, ray_length: f32) -> f32
 
 fn get_light(ray_pos: vec3<f32>, ray_dir: vec3<f32>, ray_length: f32) -> vec4<f32> {
     var in_scatter_pos = ray_pos;
-    var in_scattered_light = vec3(0.0);
-    var scatter_light_alpha = 0.0;
+    var in_scattered_light = vec4(0.0);
     let step_size = ray_length / (f32(atmosphere.num_sample_points) - 1.0);
     let dir_to_sun = view_bindings::lights.directional_lights[0].direction_to_light;
 
@@ -85,16 +72,14 @@ fn get_light(ray_pos: vec3<f32>, ray_dir: vec3<f32>, ray_length: f32) -> vec4<f3
         let sun_ray_length = ray_sphere_intersection(vec3(0.0), atmosphere.radius, in_scatter_pos, dir_to_sun).y;
         let sun_ray_depth = optical_depth(in_scatter_pos, dir_to_sun, sun_ray_length);
         let view_ray_depth = optical_depth(in_scatter_pos, -ray_dir, step_size * f32(i));
-        let transmittance = exp(-(sun_ray_depth + view_ray_depth));
-        let transmittance_scattered = pow(vec3(transmittance), atmosphere.scattering_coeffs);
+        let transmittance = exp(-(sun_ray_depth + view_ray_depth) * vec4(atmosphere.scattering_coeffs, 1.0));
         let local_density = point_density(in_scatter_pos);
 
-        scatter_light_alpha += local_density * transmittance * step_size;
-        in_scattered_light += local_density * transmittance_scattered * atmosphere.scattering_coeffs * step_size;
+        in_scattered_light += local_density * transmittance * vec4(atmosphere.scattering_coeffs, 1.0) * step_size;
         in_scatter_pos += ray_dir * step_size;
     }
 
-    return vec4(in_scattered_light, scatter_light_alpha);
+    return in_scattered_light;
 }
 
 

@@ -25,11 +25,6 @@ struct PlanetMaterial {
 @group(1) @binding(2) var surface_normals_texture: texture_2d<f32>;
 @group(1) @binding(3) var surface_normals_sampler: sampler;
 
-
-fn lerp3(a: vec3<f32>, b: vec3<f32>, t: f32) -> vec3<f32> {
-    return a + (b - a) * t;
-}
-
 fn inv_lerp(v: f32, a: f32, b: f32) -> f32 {
     return saturate((v - a) / (b - a));
 }
@@ -110,7 +105,7 @@ fn fragment(in: MeshVertexOutput) -> @location(0) vec4<f32> {
 
     var surface_normal = in.world_normal.xyz;
     let surface_bumps = triplanar_normal(in.world_position.xyz, surface_normal, planet.normal_scale, vec2(0.0), surface_normals_texture, surface_normals_sampler);
-    surface_normal = normalize(lerp3(surface_normal, surface_bumps, planet.normal_strength));
+    surface_normal = normalize(mix(surface_normal, surface_bumps, planet.normal_strength));
 
     for (var i = 0u; i < view_bindings::lights.n_directional_lights; i++) {
         let directional_light = view_bindings::lights.directional_lights[i];

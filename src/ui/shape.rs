@@ -5,12 +5,19 @@ use crate::{gen::{shape::ShapeGenerator, noise_filter::{NoiseLayer, NoiseFilterT
 
 use super::render::UiVisibility;
 
+pub struct AutoUpdateState(bool);
+impl Default for AutoUpdateState {
+    fn default() -> Self {
+        Self(true)
+    }
+}
+
 
 pub fn shape_settings(
     mut contexts: EguiContexts,
     mut shape_gen: ResMut<ShapeGenerator>,
     mut update_planet_mesh_evw: EventWriter<UpdatePlanetMesh>,
-    mut auto_update: Local<bool>,
+    mut auto_update: Local<AutoUpdateState>,
     ui_visibility: Res<UiVisibility>,
 ) {
     if *ui_visibility != UiVisibility::Visible { return };
@@ -25,12 +32,12 @@ pub fn shape_settings(
             changed = changed || (old != shape_gen.radius);
         });
 
-        ui.add(egui::Checkbox::new(&mut auto_update, "Auto-Update"));
-        ui.add_visible_ui(!*auto_update, |ui| {
+        ui.add(egui::Checkbox::new(&mut auto_update.0, "Auto-Update"));
+        if !auto_update.0 {
             if ui.button("Update Mesh").clicked() {
                 update_planet_mesh_evw.send(UpdatePlanetMesh {});
             }
-        });
+        }
 
         ui.horizontal(|ui| {
             ui.label("Noise Layers:");
@@ -158,7 +165,7 @@ pub fn shape_settings(
         }
     });
 
-    if changed && *auto_update {
+    if changed && auto_update.0 {
         update_planet_mesh_evw.send(UpdatePlanetMesh {});
     }
 }

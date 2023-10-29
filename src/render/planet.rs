@@ -24,17 +24,20 @@ impl Default for Planet {
 
 #[derive(Component)]
 pub struct TerrainFace {
+    #[allow(dead_code)]
+    index: usize,
     local_up: Vec3,
     axis_a: Vec3,
     axis_b: Vec3,
 }
 
 impl TerrainFace {
-    pub fn new(local_up: Vec3) -> Self {
+    pub fn new(index: usize, local_up: Vec3) -> Self {
         let axis_a = Vec3::new(local_up.y, local_up.z, local_up.x);
         let axis_b = local_up.cross(axis_a);
 
         Self {
+            index,
             local_up,
             axis_a,
             axis_b,
@@ -66,6 +69,7 @@ pub fn spawn_planet(
             transform: Transform::from_xyz(0.0, 0.0, 0.0),
             ..default()
         }, TerrainFace::new(
+            i, 
             directions[i]
         ))).id();
     }
@@ -107,6 +111,7 @@ pub fn generate_mesh(
 
                     let point_on_cube = face.local_up + (uv.x - 0.5) * 2.0 * face.axis_a + (uv.y - 0.5) * 2.0 * face.axis_b;
                     let point_on_sphere = point_on_cube.normalize();
+
                     let (position, elevation) = shape_gen.get_point_and_elevation(point_on_sphere);
 
                     if elevation > max_elevation {
