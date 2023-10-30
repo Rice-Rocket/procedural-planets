@@ -4,7 +4,7 @@ use serde::{Serialize, Deserialize};
 
 use crate::{render::planet::{UpdatePlanetMesh, Planet, UpdatePlanetMaterials}, gen::shape::ShapeGenerator};
 
-use super::{save::{SaveState, restore_save}, color::UiColorSettings};
+use super::{save::{SaveState, restore_save}, color::UiColorSettings, camera::CameraMode};
 
 #[derive(Resource, Default, PartialEq)]
 pub enum UiVisibility {
@@ -93,6 +93,7 @@ pub fn render_settings(
     mut update_planet_materials_evw: EventWriter<UpdatePlanetMaterials>,
     mut shape_gen: ResMut<ShapeGenerator>,
     mut colors: ResMut<UiColorSettings>,
+    mut camera_mode: ResMut<CameraMode>,
 
     time: Res<Time>,
     mut wireframe_config: ResMut<WireframeConfig>,
@@ -147,6 +148,14 @@ pub fn render_settings(
                 std::fs::write(format!("assets/saves/{}.ron", settings.save_path), serialized).unwrap();
             }
             ui.text_edit_singleline(&mut settings.save_path);
+        });
+
+        ui.separator();
+
+        ui.horizontal(|ui| {
+            ui.label("Camera Mode:");
+            ui.selectable_value(camera_mode.as_mut(), CameraMode::Edit, "Edit");
+            ui.selectable_value(camera_mode.as_mut(), CameraMode::Explore, "Explore");
         });
 
         ui.separator();
