@@ -19,6 +19,7 @@ pub fn shape_settings(
     mut update_planet_mesh_evw: EventWriter<UpdatePlanetMesh>,
     mut auto_update: Local<AutoUpdateState>,
     ui_visibility: Res<UiVisibility>,
+    time: Res<Time>,
 ) {
     if *ui_visibility != UiVisibility::Visible { return };
 
@@ -37,6 +38,14 @@ pub fn shape_settings(
             if ui.button("Update Mesh").clicked() {
                 update_planet_mesh_evw.send(UpdatePlanetMesh {});
             }
+        }
+
+        if ui.button("Randomize Planet Shape").clicked() {
+            for i in 0..shape_gen.num_layers {
+                let layer = &mut shape_gen.noise_layers[i as usize];
+                layer.filter.center += Vec3::new(time.elapsed_seconds() * 54.0 + 68.0 * i as f32, time.elapsed_seconds() * 13.0 + 75.0 * i as f32, time.elapsed_seconds() * 57.0 + 15.0 * i as f32);
+            }
+            changed = true;
         }
 
         ui.horizontal(|ui| {

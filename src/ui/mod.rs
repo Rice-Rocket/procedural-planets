@@ -8,9 +8,8 @@ pub mod controller;
 use bevy::prelude::*;
 use bevy_panorbit_camera::PanOrbitCameraPlugin;
 use super::controller::FpsControllerPlugin;
-// use bevy_fps_controller::controller::FpsControllerPlugin;
 
-use bevy_rapier3d::{prelude::{RapierPhysicsPlugin, NoUserData}, render::RapierDebugRenderPlugin};
+use bevy_rapier3d::prelude::{RapierPhysicsPlugin, NoUserData};
 use camera::*;
 use shape::*;
 use color::*;
@@ -28,7 +27,6 @@ impl Plugin for UIPlugin {
             .init_resource::<CameraMode>()
             .add_plugins(PanOrbitCameraPlugin)
             .add_plugins(RapierPhysicsPlugin::<NoUserData>::default())
-            // .add_plugins(RapierDebugRenderPlugin::default())
             .add_plugins(FpsControllerPlugin)
             .add_systems(Startup, spawn_camera)
             .add_systems(Update, (
